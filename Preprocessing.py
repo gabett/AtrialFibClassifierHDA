@@ -2,18 +2,18 @@ import numpy as np
 import pandas as pd
 import sys
 import wfdb
-import scipy
+import scipy.signal as sc
 import keras
 import pickle
+from tqdm import tqdm
 
 folderPath = './training2017/'
 recordsPath = folderPath + 'REFERENCE.csv'
 
 
 def GenerateSpectogramFromSignal(signal):
-    _, _, sg = scipy.signal.spectrogram(signal, fs=300, window=('tukey', 0.25), 
+    _, _, sg = sc.spectrogram(signal, fs=300, window=('tukey', 0.25), 
             nperseg=64, noverlap=0.5, return_onesided=True)
-
     return sg.T
 
 def FFT(signals):
@@ -51,9 +51,9 @@ def LoadSignalsAndLabelsFromFile(folderPath):
 
     y = keras.utils.to_categorical(y)
 
-    print('Storing signals and labels to file..')
-    with open ('./RecordsAndLabels.pk1', 'wb') as f:
-        pickle.dump((signals, y), f)
+    # print('Storing signals and labels to file..')
+    # with open ('./RecordsAndLabels.pk1', 'wb') as f:
+    #     pickle.dump((signals, y), f)
 
     return signals, y
 
@@ -69,28 +69,28 @@ def FindMinLen(signals):
 
     return minLen
 
-def BaselineWanderFilter(singals):
+def BaselineWanderFilter(signals):
 
     # Sampling frequency
     fs = 300
 
-    for i, signal in enumerate(signals):
+    for i, signal in tqdm(enumerate(signals)):
 
         # Baseline estimation
         win_size = int(np.round(0.2 * fs)) + 1
-        baseline = medfilt(signal, win_size)
+        baseline = sc.medfilt(signal, win_size)
         win_size = int(np.round(0.6 * fs)) + 1
-        baseline = medfilt(baseline, win_size)
+        baseline = sc.medfilt(baseline, win_size)
 
         # Removing baseline
         filt_data = signal - baseline
         signals[i] = filt_data
     
-    return filt_data
+    return signals
 
 def NormalizeData(signals):
 
-    for i, signal in enumerate(signals):
+    for i, signal in tqdm(enumerate(signals)):
 
         # Amplitude estimate
         norm_factor = np.percentile(signal, 99) - np.percentile(signal, 5)
@@ -100,7 +100,7 @@ def NormalizeData(signals):
 
 def RandomCrop(signals, target_size=9000, center_crop=False):
     
-    for i, data in enumerate(signals):
+    for i, data in tqdm(enumerate(signals)):
 
         N = data.shape[0]
         
@@ -114,7 +114,8 @@ def RandomCrop(signals, target_size=9000, center_crop=False):
             left_pads = int(np.ceil(tot_pads / 2))
             right_pads = int(np.floor(tot_pads / 2))
             signals[i] = np.pad(data, [left_pads, right_pads], mode='constant')
-        
+            continue
+            
         # Random Crop (always centered if center_crop=True)
         if center_crop:
             from_ = int((N / 2) - (target_size / 2))
@@ -128,12 +129,16 @@ def RandomCrop(signals, target_size=9000, center_crop=False):
 if __name__ == '__main__':
 
     signals, labels = LoadSignalsAndLabelsFromFile(folderPath)
+
+    print('Filtering.. ')
     filteredSignals = BaselineWanderFilter(signals)
-    normalizedSignals = NormalizeData(filteredSignals)
+
+    print('Normalizing Data.. ')
+    normalizedSignals = NormalizeData(signals)
     minLen = FindMinLen(signals)
 
+    print('Cropping signals..')
     croppedSignals = RandomCrop(normalizedSignals)
-    # transformedSignals = FFT(signals)
 
     print('Storing log signal and labels sto file..')
     with open ('./LogSignalsAndLabels.pk1', 'wb') as f:
