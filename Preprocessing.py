@@ -3,6 +3,7 @@ import pandas as pd
 import sys
 import wfdb
 from scipy.signal import medfilt
+import scipy
 import keras
 import pickle
 import os.path
