@@ -209,7 +209,7 @@ def RandomCrop(signals, target_size=9000, center_crop=False):
             left_pads = int(np.ceil(tot_pads / 2))
             right_pads = int(np.floor(tot_pads / 2))
             signals[i] = np.pad(data, [left_pads, right_pads], mode='constant')
-        
+            continue
         # Random Crop (always centered if center_crop=True)
         if center_crop:
             from_ = int((N / 2) - (target_size / 2))
@@ -224,7 +224,7 @@ if __name__ == '__main__':
 
     signals, labels = LoadSignalsAndLabelsFromFile(folderPath)
     filteredSignals = BaselineWanderFilter(signals)
-    normalizedSignals = NormalizeData(filteredSignals)
+    normalizedSignals = NormalizeData(signals)
     croppedSignals = RandomCrop(normalizedSignals)
     train, test = TrainTestSplit(croppedSignals, labels)
 
