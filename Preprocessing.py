@@ -2,15 +2,61 @@ import numpy as np
 import pandas as pd
 import sys
 import wfdb
-import scipy
+from scipy.signal import medfilt
 import keras
 import pickle
 import os.path
 from tqdm import tqdm
 from random import seed
+from sklearn.model_selection import train_test_split
 
 folderPath = './training2017/'
 recordsPath = folderPath + 'REFERENCE.csv'
+
+
+
+def TrainTestSplit(signals, labels):
+
+    df = {
+
+        'signal' : signals,
+        'label' : labels
+    }
+
+    df = pd.DataFrame(df, columns = ['signal', 'label'])
+
+    # Keep 20% of the data out for validation
+    train_reference_df, val_reference_df = train_test_split(df, test_size=0.2, stratify=df['label'], random_state=123)
+
+    # 'N' = 0
+    # 'A' = 1
+    # 'O' = 2
+    # '~' = 3
+
+    # Count the elements in the sets
+    num_train_data_normal = sum(train_reference_df['label'] == 0)
+    num_train_data_afib   = sum(train_reference_df['label'] == 1)
+    num_train_data_other = sum(train_reference_df['label'] == 2)
+    num_train_data_noise   = sum(train_reference_df['label'] == 3)
+
+    num_val_data_normal   = sum(val_reference_df['label'] == 0)
+    num_val_data_afib     = sum(val_reference_df['label'] == 1)
+    num_val_data_other = sum(val_reference_df['label'] == 2)
+    num_val_data_noise   = sum(val_reference_df['label'] == 3)
+
+    print('### TRAIN SET')
+    print('\tNormal ECG: {} ({:.2f}%)'.format(num_train_data_normal, 100 * num_train_data_normal / len(train_reference_df)))
+    print('\tAfib ECG: {} ({:.2f}%)'.format(num_train_data_afib, 100 * num_train_data_afib / len(train_reference_df)))
+    print('\tOther ECG: {} ({:.2f}%)'.format(num_train_data_other, 100 * num_train_data_other / len(train_reference_df)))
+    print('\tNoisy ECG: {} ({:.2f}%)'.format(num_train_data_noise, 100 * num_train_data_noise / len(train_reference_df)))
+    
+    print('### VALIDATION SET')
+    print('\tNormal ECG: {} ({:.2f}%)'.format(num_val_data_normal, 100 * num_val_data_normal / len(train_reference_df)))
+    print('\tAfib ECG: {} ({:.2f}%)'.format(num_val_data_afib, 100 * num_val_data_afib / len(train_reference_df)))
+    print('\tOther ECG: {} ({:.2f}%)'.format(num_val_data_other, 100 * num_val_data_other / len(val_reference_df)))
+    print('\tNoisy ECG: {} ({:.2f}%)'.format(num_val_data_noise, 100 * num_val_data_noise / len(val_reference_df)))
+
+    return train_reference_df, val_reference_df
 
 def CreateNoiseVector():
     noise = np.random.normal(0, 2000, size = (1, 9000))
@@ -83,6 +129,14 @@ def LoadSignalsAndLabelsFromFile(folderPath):
 
     print('AF: ', len(np.where(y == 'A')[0]))
 
+    df = {
+
+        'signal' : signals,
+        'label' : y
+    }
+
+    dataset = pd.DataFrame(df, columns = ['signal', 'label'])
+
     # Duplicating noisy signals to add
 
     noiseMask = np.where(y == '~')
@@ -99,7 +153,7 @@ def LoadSignalsAndLabelsFromFile(folderPath):
     y[y=='O'] = 2
     y[y=='~'] = 3
 
-    y = keras.utils.to_categorical(y)
+    #y = keras.utils.to_categorical(y)
 
     print('Storing signals and labels to file..')
     with open ('./RecordsAndLabels.pk1', 'wb') as f:
@@ -119,7 +173,7 @@ def FindMinLen(signals):
 
     return minLen
 
-def BaselineWanderFilter(singals):
+ def BaselineWanderFilter(singals):
 
     # Sampling frequency
     fs = 300
@@ -180,10 +234,8 @@ if __name__ == '__main__':
     signals, labels = LoadSignalsAndLabelsFromFile(folderPath)
     filteredSignals = BaselineWanderFilter(signals)
     normalizedSignals = NormalizeData(filteredSignals)
-    minLen = FindMinLen(signals)
-
     croppedSignals = RandomCrop(normalizedSignals)
-    # transformedSignals = FFT(signals)
+    train, test = TrainTestSplit(croppedSignals, labels)
 
     print('Storing log signal and labels sto file..')
     with open ('./LogSignalsAndLabels.pk1', 'wb') as f:
