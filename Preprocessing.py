@@ -13,8 +13,6 @@ from sklearn.model_selection import train_test_split
 folderPath = './training2017/'
 recordsPath = folderPath + 'REFERENCE.csv'
 
-
-
 def TrainTestSplit(signals, labels):
 
     df = {
@@ -129,14 +127,6 @@ def LoadSignalsAndLabelsFromFile(folderPath):
 
     print('AF: ', len(np.where(y == 'A')[0]))
 
-    df = {
-
-        'signal' : signals,
-        'label' : y
-    }
-
-    dataset = pd.DataFrame(df, columns = ['signal', 'label'])
-
     # Duplicating noisy signals to add
 
     noiseMask = np.where(y == '~')
@@ -173,7 +163,7 @@ def FindMinLen(signals):
 
     return minLen
 
- def BaselineWanderFilter(singals):
+def BaselineWanderFilter(singals):
 
     # Sampling frequency
     fs = 300
