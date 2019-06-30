@@ -5,10 +5,16 @@ import wfdb
 import scipy
 import keras
 import pickle
+import os.path
+from tqdm import tqdm
+from random import seed
 
 folderPath = './training2017/'
 recordsPath = folderPath + 'REFERENCE.csv'
 
+def CreateNoiseVector():
+    noise = np.random.normal(0, 2000, size = (1, 9000))
+    return noise
 
 def GenerateSpectogramFromSignal(signal):
     _, _, sg = scipy.signal.spectrogram(signal, fs=300, window=('tukey', 0.25), 
@@ -37,13 +43,57 @@ def LoadSignalsAndLabelsFromFile(folderPath):
     recordsFilePath = folderPath + 'REFERENCE.csv'
     recordsAndLabels = pd.read_csv(recordsFilePath, header=None, names=['filename', 'label'])
 
-    for recordName in recordsAndLabels['filename']:
-        recordName = folderPath + recordName
-        record = wfdb.rdrecord(recordName)
-        digitalSignal = record.adc()[:,0]
-        signals.append(digitalSignal)
-  
+    if os.path.isfile("./RawSignals.pk1") == False:
+
+        print('Getting raw signals ...')
+        for recordName in recordsAndLabels['filename']:     
+
+            recordName = folderPath + recordName
+            record = wfdb.rdrecord(recordName)
+            digitalSignal = record.adc()[:,0]
+            signals.append(digitalSignal)
+
+        print('Done.')
+        print('Saving signals to file ...')
+        with open ('./RawSignals.pk1', 'wb') as f:
+            pickle.dump(signals, f)
+    else:
+        print('Loading raw signals ...')
+
+        with open('./RawSignals.pk1', 'rb') as fp:
+            signals = pickle.load(fp)
+            print('Done.') 
+
+    signals = np.array(signals)
     y = recordsAndLabels['label']
+
+    print('Normal: ', len(np.where(y == 'N')[0]))
+    print('AF: ', len(np.where(y == 'A')[0]))
+    print('Other: ', len(np.where(y == 'O')[0]))
+    print('Noisy: ', len(np.where(y == '~')[0]))
+
+    # Double up AF signals
+
+    aFibMask = np.where(y == 'A')
+    aFibSignals = np.array(signals[aFibMask])
+
+    signals = np.hstack((signals, aFibSignals))
+    newAfibLabels = ['A']*len(aFibSignals)
+    y = np.append(y, newAfibLabels)
+
+    print('AF: ', len(np.where(y == 'A')[0]))
+
+    # Duplicating noisy signals to add
+
+    noiseMask = np.where(y == '~')
+    noiseSignals = np.array(signals[noiseMask])
+
+    signals = np.hstack((signals, noiseSignals))
+    newNoiseLabels = ['~']*len(noiseSignals)
+    y = np.append(y, newNoiseLabels)
+
+    print('Noise: ', len(np.where(y == '~')[0]))
+
     y[y=='N'] = 0
     y[y=='A'] = 1
     y[y=='O'] = 2
