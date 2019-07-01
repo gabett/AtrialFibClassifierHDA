@@ -54,6 +54,12 @@ def TrainTestSplit(signals, labels):
     print('\tAfib ECG: {} ({:.2f}%)'.format(num_val_data_afib, 100 * num_val_data_afib / len(train_reference_df)))
     print('\tOther ECG: {} ({:.2f}%)'.format(num_val_data_other, 100 * num_val_data_other / len(val_reference_df)))
     print('\tNoisy ECG: {} ({:.2f}%)'.format(num_val_data_noise, 100 * num_val_data_noise / len(val_reference_df)))
+    
+    train_reference_df['signal'] = train_reference_df['signal'].astype('str')
+    train_reference_df['label'] = train_reference_df['label'].astype('str')
+
+    val_reference_df['signal'] = val_reference_df['signal'].astype('str')
+    val_reference_df['label'] = val_reference_df['label'].astype('str')
 
     return train_reference_df, val_reference_df
 
@@ -223,13 +229,18 @@ def RandomCrop(signals, target_size=9000, center_crop=False):
 if __name__ == '__main__':
 
     signals, labels = LoadSignalsAndLabelsFromFile(folderPath)
-    filteredSignals = BaselineWanderFilter(signals)
+    # filteredSignals = BaselineWanderFilter(signals)
     normalizedSignals = NormalizeData(signals)
     croppedSignals = RandomCrop(normalizedSignals)
-    train, test = TrainTestSplit(croppedSignals, labels)
+    logSignals = FFT(croppedSignals)
+    train, test = TrainTestSplit(logSignals, labels)
 
-    print('Storing log signal and labels sto file..')
-    with open ('./LogSignalsAndLabels.pk1', 'wb') as f:
-        pickle.dump((croppedSignals, labels), f)
+    print('Storing training set to file..')
+    with open ('./TrainingSet.pk1', 'wb') as f:
+        pickle.dump((train), f)
+    
+    print('Storing test set to file..')
+    with open ('./TestSet.pk1', 'wb') as f:
+        pickle.dump((test), f)
 
     print('Preprocessing completed')
