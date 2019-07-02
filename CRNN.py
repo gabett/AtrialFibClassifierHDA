@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 from keras.preprocessing.image import ImageDataGenerator
 from keras.models import Sequential
 from sklearn.metrics import confusion_matrix
-from keras.layers import Dense, Dropout, Flatten, Lambda, Reshape
+from keras.layers import Dense, Dropout, Flatten, Lambda, Reshape, Bidirectional, LSTM
 from keras.layers import Conv2D, MaxPooling2D, BatchNormalization, Activation
 from keras import backend as K
 
@@ -34,8 +34,7 @@ def AugGenerator(xTrain, xTest, yTrain, yTest):
     return trainGenerator, testGenerator
 
 
-
-def CNN(blockSize, blockCount, inputShape, trainGen, testGen, epochs):
+def CRNN(blockSize, blockCount, inputShape, trainGen, testGen, epochs):
 
     model = Sequential()
 
@@ -58,9 +57,11 @@ def CNN(blockSize, blockCount, inputShape, trainGen, testGen, epochs):
         model.add(Dropout(0.15))
 
     # Feature aggregation across time
-    model.add(Lambda(lambda x: K.mean(x, axis=1)))
+    model.add(Reshape((3, 224)))
 
-    model.add(Flatten())
+    # LSTM layer
+    model.add(Bidirectional(LSTM(200), merge_mode='ave'))
+    model.add(Dropout(0.5))
 
     # Linear classifier
     model.add(Dense(4, activation='softmax'))
@@ -84,9 +85,9 @@ if __name__ == '__main__':
     xTest, yTest = LoadTrainingSet('./TestSetFFT.pk1')
     trainGen, testGen = AugGenerator(xTrain, xTest, yTrain, yTest)
     
-    model = CNN(4, 6, (140, 33, 1), trainGen, testGen, 1)
-    model.save('./cnn_model.h5')
-    model = keras.models.load_model('./cnn_model.h5')
+    model = CRNN(4, 6, (140, 33, 1), trainGen, testGen, 1)
+    model.save('./crnn_model.h5')
+    model = keras.models.load_model('./crnn_model.h5')
     model.summary()
 
     print('Evaluation...')
@@ -94,8 +95,8 @@ if __name__ == '__main__':
     print(y_predict)
     yTest = yTest.argmax(axis=1)
 
-    f = open('./evaluation_CNN.txt', 'w')
-    f.write('model: CNN, epochs: {} \n confusion_matrix: \n {}'.format(1, confusion_matrix(yTest, y_predict)))
+    f = open('./evaluation_CRNN.txt', 'w')
+    f.write('model: CRNN, epochs: {} \n confusion_matrix: \n {}'.format(1, confusion_matrix(yTest, y_predict)))
     f.close()    
 
-    print('CNN completed.')
+    print('CRNN completed.')

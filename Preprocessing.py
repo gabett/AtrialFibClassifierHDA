@@ -13,68 +13,97 @@ from sklearn.model_selection import train_test_split
 
 folderPath = './training2017/'
 recordsPath = folderPath + 'REFERENCE.csv'
+isFourierEnabled = True
 
-def TrainTestSplit(signals, labels):
+def TrainTestSplit(signals, labels, multiDimensionalInput = False):
 
-    df = {
+    if multiDimensionalInput == False:
+        df = {
 
-        'signal' : signals,
-        'label' : labels
-    }
+            'signal' : signals,
+            'label' : labels
+        }
 
-    df = pd.DataFrame(df, columns = ['signal', 'label'])
+        df = pd.DataFrame(df, columns = ['signal', 'label'])
 
-    # Keep 20% of the data out for validation
-    train_reference_df, val_reference_df = train_test_split(df, test_size=0.2, stratify=df['label'], random_state=123)
+        # Keep 20% of the data out for validation
+        train_reference_df, val_reference_df = train_test_split(df, test_size=0.2, stratify=df['label'], random_state=123)
 
-    # 'N' = 0
-    # 'A' = 1
-    # 'O' = 2
-    # '~' = 3
+        # 'N' = 0
+        # 'A' = 1
+        # 'O' = 2
+        # '~' = 3
 
-    # Count the elements in the sets
-    num_train_data_normal = sum(train_reference_df['label'] == 0)
-    num_train_data_afib   = sum(train_reference_df['label'] == 1)
-    num_train_data_other = sum(train_reference_df['label'] == 2)
-    num_train_data_noise   = sum(train_reference_df['label'] == 3)
+        # Count the elements in the sets
+        num_train_data_normal = sum(train_reference_df['label'] == 0)
+        num_train_data_afib   = sum(train_reference_df['label'] == 1)
+        num_train_data_other = sum(train_reference_df['label'] == 2)
+        num_train_data_noise   = sum(train_reference_df['label'] == 3)
 
-    num_val_data_normal   = sum(val_reference_df['label'] == 0)
-    num_val_data_afib     = sum(val_reference_df['label'] == 1)
-    num_val_data_other = sum(val_reference_df['label'] == 2)
-    num_val_data_noise   = sum(val_reference_df['label'] == 3)
+        num_val_data_normal   = sum(val_reference_df['label'] == 0)
+        num_val_data_afib     = sum(val_reference_df['label'] == 1)
+        num_val_data_other = sum(val_reference_df['label'] == 2)
+        num_val_data_noise   = sum(val_reference_df['label'] == 3)
 
-    print('### TRAIN SET')
-    print('\tNormal ECG: {} ({:.2f}%)'.format(num_train_data_normal, 100 * num_train_data_normal / len(train_reference_df)))
-    print('\tAfib ECG: {} ({:.2f}%)'.format(num_train_data_afib, 100 * num_train_data_afib / len(train_reference_df)))
-    print('\tOther ECG: {} ({:.2f}%)'.format(num_train_data_other, 100 * num_train_data_other / len(train_reference_df)))
-    print('\tNoisy ECG: {} ({:.2f}%)'.format(num_train_data_noise, 100 * num_train_data_noise / len(train_reference_df)))
-    
-    print('### VALIDATION SET')
-    print('\tNormal ECG: {} ({:.2f}%)'.format(num_val_data_normal, 100 * num_val_data_normal / len(train_reference_df)))
-    print('\tAfib ECG: {} ({:.2f}%)'.format(num_val_data_afib, 100 * num_val_data_afib / len(train_reference_df)))
-    print('\tOther ECG: {} ({:.2f}%)'.format(num_val_data_other, 100 * num_val_data_other / len(val_reference_df)))
-    print('\tNoisy ECG: {} ({:.2f}%)'.format(num_val_data_noise, 100 * num_val_data_noise / len(val_reference_df)))
-    
-    train_reference_df['signal'] = train_reference_df['signal'].astype('str')
-    train_reference_df['label'] = train_reference_df['label'].astype('str')
+        print('### TRAIN SET')
+        print('\tNormal ECG: {} ({:.2f}%)'.format(num_train_data_normal, 100 * num_train_data_normal / len(train_reference_df)))
+        print('\tAfib ECG: {} ({:.2f}%)'.format(num_train_data_afib, 100 * num_train_data_afib / len(train_reference_df)))
+        print('\tOther ECG: {} ({:.2f}%)'.format(num_train_data_other, 100 * num_train_data_other / len(train_reference_df)))
+        print('\tNoisy ECG: {} ({:.2f}%)'.format(num_train_data_noise, 100 * num_train_data_noise / len(train_reference_df)))
+        
+        print('### VALIDATION SET')
+        print('\tNormal ECG: {} ({:.2f}%)'.format(num_val_data_normal, 100 * num_val_data_normal / len(train_reference_df)))
+        print('\tAfib ECG: {} ({:.2f}%)'.format(num_val_data_afib, 100 * num_val_data_afib / len(train_reference_df)))
+        print('\tOther ECG: {} ({:.2f}%)'.format(num_val_data_other, 100 * num_val_data_other / len(val_reference_df)))
+        print('\tNoisy ECG: {} ({:.2f}%)'.format(num_val_data_noise, 100 * num_val_data_noise / len(val_reference_df)))
 
-    val_reference_df['signal'] = val_reference_df['signal'].astype('str')
-    val_reference_df['label'] = val_reference_df['label'].astype('str')
+        return train_reference_df, val_reference_df
+    else:
+        xTrain, xTest, yTrain, yTest = train_test_split(signals, labels, test_size=.2)
 
-    return train_reference_df, val_reference_df
+        num_train_data_normal = sum(np.argmax(yTrain, axis = 1) == 0)
+        num_train_data_afib   = sum(np.argmax(yTrain, axis = 1) == 1)
+        num_train_data_other = sum(np.argmax(yTrain, axis = 1) == 2)
+        num_train_data_noise   = sum(np.argmax(yTrain, axis = 1) == 3)
+
+        num_val_data_normal   = sum(np.argmax(yTest, axis = 1) == 0)
+        num_val_data_afib     = sum(np.argmax(yTest, axis = 1) == 1)
+        num_val_data_other = sum(np.argmax(yTest, axis = 1) == 2)
+        num_val_data_noise   = sum(np.argmax(yTest, axis = 1) == 3)
+
+        print('### TRAIN SET')
+        print('\tNormal ECG: {} ({:.2f}%)'.format(num_train_data_normal, 100 * num_train_data_normal / len(xTrain)))
+        print('\tAfib ECG: {} ({:.2f}%)'.format(num_train_data_afib, 100 * num_train_data_afib / len(xTrain)))
+        print('\tOther ECG: {} ({:.2f}%)'.format(num_train_data_other, 100 * num_train_data_other / len(xTrain)))
+        print('\tNoisy ECG: {} ({:.2f}%)'.format(num_train_data_noise, 100 * num_train_data_noise / len(xTrain)))
+        
+        print('### VALIDATION SET')
+        print('\tNormal ECG: {} ({:.2f}%)'.format(num_val_data_normal, 100 * num_val_data_normal / len(xTest)))
+        print('\tAfib ECG: {} ({:.2f}%)'.format(num_val_data_afib, 100 * num_val_data_afib / len(xTest)))
+        print('\tOther ECG: {} ({:.2f}%)'.format(num_val_data_other, 100 * num_val_data_other / len(xTest)))
+        print('\tNoisy ECG: {} ({:.2f}%)'.format(num_val_data_noise, 100 * num_val_data_noise / len(xTest)))
+
+        return xTrain, xTest, yTrain, yTest
 
 def CreateNoiseVector():
     noise = np.random.normal(0, 2000, size = (1, 9000))
     return noise
 
-def GenerateSpectogramFromSignal(signal):
+def GenerateSpectrogramFromSignal(signal):
     _, _, sg = scipy.signal.spectrogram(signal, fs=300, window=('tukey', 0.25), 
             nperseg=64, noverlap=0.5, return_onesided=True)
 
     return sg.T
 
 def FFT(signals):
-    spectograms = np.apply_along_axis(GenerateSpectogramFromSignal, 1, signals)
+
+    print('Computing FFTs ...')
+    spectograms = []
+
+    for s in signals:
+        spectograms.append(GenerateSpectrogramFromSignal(s))
+
+    spectograms = np.array(spectograms)
 
     logSpectograms = np.log(spectograms + 1)
     means = logSpectograms.mean(axis=(1,2))
@@ -86,6 +115,7 @@ def FFT(signals):
     with open ('./LogSignals.pk1', 'wb') as f:
         pickle.dump(logSignals, f)
 
+    print('Done.')
     return logSignals
 
 def LoadSignalsAndLabelsFromFile(folderPath):
@@ -118,6 +148,7 @@ def LoadSignalsAndLabelsFromFile(folderPath):
     signals = np.array(signals)
     y = recordsAndLabels['label']
 
+    print('Class distribution before doubling up ...')
     print('Normal: ', len(np.where(y == 'N')[0]))
     print('AF: ', len(np.where(y == 'A')[0]))
     print('Other: ', len(np.where(y == 'O')[0]))
@@ -132,7 +163,7 @@ def LoadSignalsAndLabelsFromFile(folderPath):
     newAfibLabels = ['A']*len(aFibSignals)
     y = np.append(y, newAfibLabels)
 
-    print('AF: ', len(np.where(y == 'A')[0]))
+    print('New AF observations number: ', len(np.where(y == 'A')[0]))
 
     # Duplicating noisy signals to add
 
@@ -143,19 +174,21 @@ def LoadSignalsAndLabelsFromFile(folderPath):
     newNoiseLabels = ['~']*len(noiseSignals)
     y = np.append(y, newNoiseLabels)
 
-    print('Noise: ', len(np.where(y == '~')[0]))
+    print('New Noise observations number: ', len(np.where(y == '~')[0]))
 
     y[y=='N'] = 0
     y[y=='A'] = 1
     y[y=='O'] = 2
     y[y=='~'] = 3
 
-    #y = keras.utils.to_categorical(y)
+    if isFourierEnabled:
+        y = keras.utils.to_categorical(y)
 
     print('Storing signals and labels to file..')
     with open ('./RecordsAndLabels.pk1', 'wb') as f:
         pickle.dump((signals, y), f)
-
+        
+    print('Done.')
     return signals, y
 
 def FindMinLen(signals):
@@ -172,6 +205,7 @@ def FindMinLen(signals):
 
 def BaselineWanderFilter(singals):
 
+    print('Filtering ...')
     # Sampling frequency
     fs = 300
 
@@ -187,20 +221,24 @@ def BaselineWanderFilter(singals):
         filt_data = signal - baseline
         signals[i] = filt_data
     
+    print('Done.')
     return filt_data
 
 def NormalizeData(signals):
 
+    print('Normalizing data ...')
     for i, signal in enumerate(signals):
 
         # Amplitude estimate
         norm_factor = np.percentile(signal, 99) - np.percentile(signal, 5)
         signals[i] = signal / norm_factor
 
+    print('Done.')
     return signals
 
 def RandomCrop(signals, target_size=9000, center_crop=False):
     
+    print('Cropping data ...')
     for i, data in enumerate(signals):
 
         N = data.shape[0]
@@ -216,6 +254,7 @@ def RandomCrop(signals, target_size=9000, center_crop=False):
             right_pads = int(np.floor(tot_pads / 2))
             signals[i] = np.pad(data, [left_pads, right_pads], mode='constant')
             continue
+
         # Random Crop (always centered if center_crop=True)
         if center_crop:
             from_ = int((N / 2) - (target_size / 2))
@@ -224,23 +263,41 @@ def RandomCrop(signals, target_size=9000, center_crop=False):
         to_ = from_ + target_size
         signals[i] = data[from_:to_]
     
+    print('Done.')
     return signals
   
 if __name__ == '__main__':
 
-    signals, labels = LoadSignalsAndLabelsFromFile(folderPath)
-    # filteredSignals = BaselineWanderFilter(signals)
-    normalizedSignals = NormalizeData(signals)
-    croppedSignals = RandomCrop(normalizedSignals)
-    logSignals = FFT(croppedSignals)
-    train, test = TrainTestSplit(logSignals, labels)
+    signals, labels = LoadSignalsAndLabelsFromFile(folderPath)  
+    #signals = BaselineWanderFilter(signals)
+    signals = RandomCrop(signals) 
 
-    print('Storing training set to file..')
-    with open ('./TrainingSet.pk1', 'wb') as f:
-        pickle.dump((train), f)
+    if isFourierEnabled == True:
+        signals = FFT(signals)
     
-    print('Storing test set to file..')
-    with open ('./TestSet.pk1', 'wb') as f:
-        pickle.dump((test), f)
+    signals = NormalizeData(signals) 
+        
+    if isFourierEnabled == False:
+        train, test = TrainTestSplit(signals, labels, False)
+
+        print('Storing training set to file..')
+        with open ('./TrainingSet.pk1', 'wb') as f:
+            pickle.dump((train), f)
+            
+        print('Storing test set to file..')
+        with open ('./TestSet.pk1', 'wb') as f:
+            pickle.dump((test), f)
+
+    else:
+
+        xTrain, xTest, yTrain, yTest = TrainTestSplit(signals, labels, True)
+
+        print('Storing training set to file..')
+        with open ('./TrainingSetFFT.pk1', 'wb') as f:
+            pickle.dump((xTrain, yTrain), f)
+            
+        print('Storing test set to file..')
+        with open ('./TestSetFFT.pk1', 'wb') as f:
+            pickle.dump((xTest, yTest), f)
 
     print('Preprocessing completed')
