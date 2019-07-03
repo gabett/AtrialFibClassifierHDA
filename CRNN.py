@@ -6,8 +6,9 @@ from sklearn.model_selection import train_test_split
 from keras.preprocessing.image import ImageDataGenerator
 from keras.models import Sequential
 from sklearn.metrics import confusion_matrix
-from keras.layers import Dense, Dropout, Flatten, Lambda, Reshape, Bidirectional, LSTM
+from keras.layers import Dense, Dropout, Flatten, Lambda, Reshape, Bidirectional, LSTM, GaussianNoise
 from keras.layers import Conv2D, MaxPooling2D, BatchNormalization, Activation
+from keras.callbacks import ModelCheckpoint
 from keras import backend as K
 
 
@@ -63,6 +64,9 @@ def CRNN(blockSize, blockCount, inputShape, trainGen, testGen, epochs):
     model.add(Bidirectional(LSTM(200), merge_mode='ave'))
     model.add(Dropout(0.5))
 
+    # Adding noise
+    model.add(GaussianNoise(0.2))
+
     # Linear classifier
     model.add(Dense(4, activation='softmax'))
 
@@ -72,10 +76,15 @@ def CRNN(blockSize, blockCount, inputShape, trainGen, testGen, epochs):
                   metrics=['accuracy']) # F1?
 
 
+   # Checkpoint
+    filepath="./model/weights-{epoch:02d}-{val_acc:.2f}.h5"
+    checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
+    callbacks_list = [checkpoint]
+
     model.fit_generator(trainGen,
-                        validation_data=testGen, steps_per_epoch = trainGen.x.size // 20,
-                        validation_steps = testGen.x.size // 20,
-                        epochs=epochs, verbose=1)
+                        validation_data=testGen, steps_per_epoch = len(trainGen),
+                        validation_steps = len(testGen),
+                        epochs=epochs, callbacks=callbacks_list, verbose=1)
     return model
 
 
@@ -85,7 +94,7 @@ if __name__ == '__main__':
     xTest, yTest = LoadTrainingSet('./TestSetFFT.pk1')
     trainGen, testGen = AugGenerator(xTrain, xTest, yTrain, yTest)
     
-    model = CRNN(4, 6, (140, 33, 1), trainGen, testGen, 1)
+    model = CRNN(4, 6, (140, 33, 1), trainGen, testGen, 200)
     model.save('./crnn_model.h5')
     model = keras.models.load_model('./crnn_model.h5')
     model.summary()

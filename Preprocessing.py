@@ -221,7 +221,11 @@ def BaselineWanderFilter(singals):
         filt_data = signal - baseline
         signals[i] = filt_data
     
+    print('Storing filtered signals..')
+    with open ('./FilteredSignals.pk1', 'wb') as f:
+        pickle.dump((signals), f)
     print('Done.')
+
     return filt_data
 
 def NormalizeData(signals):
@@ -269,7 +273,11 @@ def RandomCrop(signals, target_size=9000, center_crop=False):
 if __name__ == '__main__':
 
     signals, labels = LoadSignalsAndLabelsFromFile(folderPath)  
-    #signals = BaselineWanderFilter(signals)
+    signals = BaselineWanderFilter(signals)
+
+    if os.path.isfile('FilteredSignals.pk1'):
+        signals = pickle.load('FilteredSignals.pk1', 'rb')
+    
     signals = RandomCrop(signals) 
 
     if isFourierEnabled == True:

@@ -5,3 +5,7 @@
 *.mat
 *.csv
 training2017/RECORDS
+cnn_model.h5
+HDA2.ipynb
+model/weights-01-0.35.h5
+model/weights-03-0.45.h5
