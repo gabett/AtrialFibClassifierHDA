@@ -203,7 +203,7 @@ def FindMinLen(signals):
 
     return minLen
 
-def BaselineWanderFilter(singals):
+def BaselineWanderFilter(signals):
 
     print('Filtering ...')
     # Sampling frequency
@@ -240,7 +240,7 @@ def NormalizeData(signals):
     print('Done.')
     return signals
 
-def RandomCrop(signals, target_size=9000, center_crop=False):
+def RandomCrop(signals, target_size=9000, center_crop=True):
     
     print('Cropping data ...')
     for i, data in enumerate(signals):

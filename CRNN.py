@@ -10,7 +10,8 @@ from keras.layers import Dense, Dropout, Flatten, Lambda, Reshape, Bidirectional
 from keras.layers import Conv2D, MaxPooling2D, BatchNormalization, Activation
 from keras.callbacks import ModelCheckpoint
 from keras import backend as K
-
+from sklearn.metrics import precision_recall_fscore_support, roc_curve, auc, accuracy_score, precision_recall_curve
+import matplotlib.pyplot as plt
 
 def LoadTrainingSet(filename):
 
@@ -35,7 +36,7 @@ def AugGenerator(xTrain, xTest, yTrain, yTest):
     return trainGenerator, testGenerator
 
 
-def CRNN(blockSize, blockCount, inputShape, trainGen, testGen, epochs):
+def CRNN(blockSize, blockCount, inputShape, trainGen, testGen):
 
     model = Sequential()
 
@@ -70,14 +71,17 @@ def CRNN(blockSize, blockCount, inputShape, trainGen, testGen, epochs):
     # Linear classifier
     model.add(Dense(4, activation='softmax'))
 
-
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=keras.optimizers.Adam(),
-                  metrics=['accuracy']) # F1?
+                  metrics=['accuracy']) 
+
+    return model
 
 
-   # Checkpoint
-    filepath="./model/weights-{epoch:02d}-{val_acc:.2f}.h5"
+def TrainCRNN(model, trainGen, testGen, epochs):
+
+    # Checkpoint
+    filepath="./model/weights-crnn-{epoch:02d}-{val_acc:.2f}.h5"
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
     callbacks_list = [checkpoint]
 
@@ -85,8 +89,69 @@ def CRNN(blockSize, blockCount, inputShape, trainGen, testGen, epochs):
                         validation_data=testGen, steps_per_epoch = len(trainGen),
                         validation_steps = len(testGen),
                         epochs=epochs, callbacks=callbacks_list, verbose=1)
-    return model
 
+    model.save('./crnn_model.h5')
+
+def EvaluateCRNN(model, weightsFile, testGen, yTest, steps):
+
+    model.load_weights(weightsFile)
+
+    print('Evaluation...')
+    yPredictedProbs = model.predict_generator(testGen, steps = steps)
+    yMaxPredictedProbs = np.amax(yPredictedProbs, axis=1)
+    yPredicted = yPredictedProbs.argmax(axis = 1)
+    yTest = yTest.argmax(axis=1)
+
+    # Evaluate accuracy
+    accuracy = accuracy_score(yTest, yPredicted)
+
+    # Evaluate precision, recall and fscore
+    precision, recall, fscore, _ = precision_recall_fscore_support(yTest, yPredicted, average='macro')
+
+    precisions = []
+    recalls = []
+    f1Scores = []
+
+    for i in range(4):
+
+        yMaxPredictedProbsForClass = yMaxPredictedProbs
+
+        # 1 * casts to int.
+        maskTest = 1 * (yTest == i)
+        maskPred = 1 * (yPredicted == i)
+        
+        precision, recall, fscore, _ = precision_recall_fscore_support(maskTest, maskPred, average='binary')
+
+        precisions.append(precision)
+        recalls.append(recall)
+        f1Scores.append(fscore)
+
+        fpr, tpr, _ = roc_curve(maskTest, yMaxPredictedProbsForClass)
+        roc_auc = auc(fpr, tpr)
+
+        # ROC
+        plt.figure()
+        plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Receiver operating characteristic (ROC) for class' )
+        plt.legend(loc="lower right")
+        plt.savefig("./ROC_" + str(i))
+
+        # PROC
+        prec, rec, _ = precision_recall_curve(maskTest, yMaxPredictedProbsForClass)
+
+        plt.figure()
+        plt.plot(prec, rec, color='darkorange', lw=2)
+        plt.xlabel('Precision')
+        plt.ylabel('Recall')
+        plt.title('Precision-Recall Curve (PRC) for class')
+        plt.savefig("./PRC_" + str(i))
+
+    precision = sum(precisions) / 4.0
+    recall = sum(recalls) / 4.0
+    f1 = sum(f1Scores) / 4.0
 
 if __name__ == '__main__':
 
@@ -94,18 +159,8 @@ if __name__ == '__main__':
     xTest, yTest = LoadTrainingSet('./TestSetFFT.pk1')
     trainGen, testGen = AugGenerator(xTrain, xTest, yTrain, yTest)
     
-    model = CRNN(4, 6, (140, 33, 1), trainGen, testGen, 200)
-    model.save('./crnn_model.h5')
-    model = keras.models.load_model('./crnn_model.h5')
-    model.summary()
+    model = CRNN(4, 6, (140, 33, 1), trainGen, testGen)
+    TrainCRNN(model, trainGen, testGen, 1)
+    EvaluateCRNN(model, './crnn_model.h5', testGen, yTest, len(testGen))
 
-    print('Evaluation...')
-    y_predict = model.predict_generator(testGen, steps = testGen.x.size // 20).argmax(axis=1)
-    print(y_predict)
-    yTest = yTest.argmax(axis=1)
-
-    f = open('./evaluation_CRNN.txt', 'w')
-    f.write('model: CRNN, epochs: {} \n confusion_matrix: \n {}'.format(1, confusion_matrix(yTest, y_predict)))
-    f.close()    
-
-    print('CRNN completed.')
+    print('CNN completed.')
