@@ -121,33 +121,28 @@ def EvaluateCNN(model, weightsFile, testGen, yTest, steps):
         recalls.append(recall)
         f1Scores.append(fscore)
 
-        yMaxPredictedProbsForClass[~maskPred] = 0
-        fpr, tpr, _ = roc_curve(yPredicted, yMaxPredictedProbsForClass)
+        fpr, tpr, _ = roc_curve(maskTest, yMaxPredictedProbsForClass)
         roc_auc = auc(fpr, tpr)
 
         # ROC
         plt.figure()
         plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
         plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
         plt.xlabel('False Positive Rate')
         plt.ylabel('True Positive Rate')
-        plt.title('Receiver operating characteristic (ROC) for class ' + i)
+        plt.title('Receiver operating characteristic (ROC) for class' )
         plt.legend(loc="lower right")
-        plt.show(block=False)
+        plt.savefig("./ROC_" + str(i))
 
         # PROC
-        prec, rec, _ = precision_recall_curve(yPredicted, yMaxPredictedProbs)
+        prec, rec, _ = precision_recall_curve(maskTest, yMaxPredictedProbsForClass)
 
         plt.figure()
         plt.plot(prec, rec, color='darkorange', lw=2)
-        plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
         plt.xlabel('Precision')
         plt.ylabel('Recall')
-        plt.title('Precision-Recall Curve (PRC) for class ' + i)
-        plt.show(block=False)
+        plt.title('Precision-Recall Curve (PRC) for class')
+        plt.savefig("./PRC_" + str(i))
 
     precision = sum(precisions) / 4.0
     recall = sum(recalls) / 4.0
