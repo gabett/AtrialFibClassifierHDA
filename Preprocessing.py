@@ -226,7 +226,7 @@ def BaselineWanderFilter(signals):
         pickle.dump((signals), f)
     print('Done.')
 
-    return filt_data
+    return signals
 
 def NormalizeData(signals):
 
