@@ -273,11 +273,13 @@ def RandomCrop(signals, target_size=9000, center_crop=True):
 if __name__ == '__main__':
 
     signals, labels = LoadSignalsAndLabelsFromFile(folderPath)  
-    signals = BaselineWanderFilter(signals)
 
-    if os.path.isfile('FilteredSignals.pk1'):
-        signals = pickle.load('FilteredSignals.pk1', 'rb')
-    
+    if os.path.isfile('./FilteredSignals.pk1'):
+        with open('./FilteredSignals.pk1', 'rb') as fp:
+            signals = pickle.load(fp)
+    else:
+        signals = BaselineWanderFilter(signals)
+
     signals = RandomCrop(signals) 
 
     if isFourierEnabled == True:
