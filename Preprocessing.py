@@ -275,6 +275,7 @@ if __name__ == '__main__':
     signals, labels = LoadSignalsAndLabelsFromFile(folderPath)  
 
     if os.path.isfile('./FilteredSignals.pk1'):
+        print('Loading previously filtered signals ...')
         with open('./FilteredSignals.pk1', 'rb') as fp:
             signals = pickle.load(fp)
     else:
