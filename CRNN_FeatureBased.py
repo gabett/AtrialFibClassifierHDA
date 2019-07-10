@@ -80,3 +80,67 @@ def TrainCRNN(model, epochs):
                         epochs=epochs, callbacks=callbacks_list, verbose=1)
 
     model.save('./crnn_feat_model.h5')
+
+def EvaluateCRNN(model, weightsFile):
+
+    xTest, yTest = LoadTestSet('./TestSetFeatureBased.pk1')
+
+    steps = 3328
+    model.load_weights(weightsFile)
+
+    print('Evaluation...')
+    yPredictedProbs = model.predict(xTest, yTest, steps = steps)
+    yMaxPredictedProbs = np.amax(yPredictedProbs, axis=1)
+    yPredicted = yPredictedProbs.argmax(axis = 1)
+    yTest = yTest.argmax(axis=1)
+
+    # Evaluate accuracy
+    accuracy = accuracy_score(yTest, yPredicted)
+
+    # Evaluate precision, recall and fscore
+    precision, recall, fscore, _ = precision_recall_fscore_support(yTest, yPredicted, average='macro')
+
+    precisions = []
+    recalls = []
+    f1Scores = []
+
+    for i in range(4):
+
+        yMaxPredictedProbsForClass = yMaxPredictedProbs
+
+        # 1 * casts to int.
+        maskTest = 1 * (yTest == i)
+        maskPred = 1 * (yPredicted == i)
+        
+        precision, recall, fscore, _ = precision_recall_fscore_support(maskTest, maskPred, average='binary')
+
+        precisions.append(precision)
+        recalls.append(recall)
+        f1Scores.append(fscore)
+
+        fpr, tpr, _ = roc_curve(maskTest, yMaxPredictedProbsForClass)
+        roc_auc = auc(fpr, tpr)
+
+        # ROC
+        plt.figure()
+        plt.plot(fpr, tpr, color='darkorange', lw=2, label='ROC curve (area = %0.2f)' % roc_auc)
+        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('Receiver operating characteristic (ROC) for class' )
+        plt.legend(loc="lower right")
+        plt.savefig("./ROC_" + str(i))
+
+        # PROC
+        prec, rec, _ = precision_recall_curve(maskTest, yMaxPredictedProbsForClass)
+
+        plt.figure()
+        plt.plot(prec, rec, color='darkorange', lw=2)
+        plt.xlabel('Precision')
+        plt.ylabel('Recall')
+        plt.title('Precision-Recall Curve (PRC) for class')
+        plt.savefig("./PRC_" + str(i))
+
+    precision = sum(precisions) / 4.0
+    recall = sum(recalls) / 4.0
+    f1 = sum(f1Scores) / 4.0

@@ -15,6 +15,7 @@ if __name__ == "__main__":
         Preprocessing.PreprocessingForFeatureBasedApproach(isFourierEnabled=False)
         model = CRNN_FeatureBased.CRNN(input_shape =  (4, 13, 1))
         CRNN_FeatureBased.TrainCRNN(model, 50)
+        CRNN_FeatureBased.EvaluateCRNN(model, './crnn_feat_model.h5')
 
     elif spectrogram == True:
         Preprocessing.PreprocessingForSpectrogramApproach(isFourierEnabled=True)
