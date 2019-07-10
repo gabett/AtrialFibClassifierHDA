@@ -24,7 +24,7 @@ def LoadTestSet(filename):
     with open(filename, 'rb') as f:
         xTest, yTest = pickle.load(f)
         return xTest, yTest
-    
+
 
 def AugGenerator(xTrain, xTest, yTrain, yTest):
 
