@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 from keras.preprocessing.image import ImageDataGenerator
 from keras.models import Sequential
 from sklearn.metrics import confusion_matrix
-from keras.layers import Dense, Dropout, Flatten, Lambda, Reshape, Bidirectional, LSTM, GaussianNoise
+from keras.layers import Dense, Dropout, Flatten, Lambda, Reshape, GaussianNoise
 from keras.layers import Conv2D, MaxPooling2D, BatchNormalization, Activation
 from keras.callbacks import ModelCheckpoint
 from keras import backend as K
@@ -25,7 +25,6 @@ def LoadTestSet(filename):
         xTest, yTest = pickle.load(f)
         return xTest, yTest
 
-
 def AugGenerator(xTrain, xTest, yTrain, yTest):
 
     imagegen = ImageDataGenerator()
@@ -35,8 +34,7 @@ def AugGenerator(xTrain, xTest, yTrain, yTest):
 
     return trainGenerator, testGenerator
 
-
-def CRNN(blockSize, blockCount, inputShape, trainGen, testGen):
+def CNN(blockSize, blockCount, inputShape):
 
     model = Sequential()
 
@@ -59,11 +57,9 @@ def CRNN(blockSize, blockCount, inputShape, trainGen, testGen):
         model.add(Dropout(0.15))
 
     # Feature aggregation across time
-    model.add(Reshape((3, 224)))
+    model.add(Lambda(lambda x: K.mean(x, axis=1)))
 
-    # LSTM layer
-    model.add(Bidirectional(LSTM(200), merge_mode='ave'))
-    model.add(Dropout(0.5))
+    model.add(Flatten())
 
     # Adding noise
     model.add(GaussianNoise(0.2))
@@ -73,15 +69,19 @@ def CRNN(blockSize, blockCount, inputShape, trainGen, testGen):
 
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=keras.optimizers.Adam(),
-                  metrics=['accuracy']) 
+                  metrics=['accuracy'])
 
     return model
 
+def TrainCNN(model, epochs):
 
-def TrainCRNN(model, trainGen, testGen, epochs):
+    xTrain, yTrain = LoadTrainingSet('./TrainingSetFFT.pk1')
+    xTest, yTest = LoadTrainingSet('./TestSetFFT.pk1')
+    
+    trainGen, testGen = AugGenerator(xTrain, xTest, yTrain, yTest)
 
     # Checkpoint
-    filepath="./model/weights-crnn-{epoch:02d}-{val_acc:.2f}.h5"
+    filepath="./model/weights-{epoch:02d}-{val_acc:.2f}.h5"
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
     callbacks_list = [checkpoint]
 
@@ -90,9 +90,16 @@ def TrainCRNN(model, trainGen, testGen, epochs):
                         validation_steps = len(testGen),
                         epochs=epochs, callbacks=callbacks_list, verbose=1)
 
-    model.save('./crnn_model.h5')
+    model.save('./cnn_model.h5')
 
-def EvaluateCRNN(model, weightsFile, testGen, yTest, steps):
+def EvaluateCNN(model, weightsFile):
+
+    xTrain, yTrain = LoadTrainingSet('./TrainingSetFFT.pk1')
+    xTest, yTest = LoadTrainingSet('./TestSetFFT.pk1')
+    
+    _, testGen = AugGenerator(xTrain, xTest, yTrain, yTest)
+
+    steps = len(testGen)
 
     model.load_weights(weightsFile)
 
@@ -159,8 +166,8 @@ if __name__ == '__main__':
     xTest, yTest = LoadTrainingSet('./TestSetFFT.pk1')
     trainGen, testGen = AugGenerator(xTrain, xTest, yTrain, yTest)
     
-    model = CRNN(4, 6, (140, 33, 1), trainGen, testGen)
-    TrainCRNN(model, trainGen, testGen, 1)
-    EvaluateCRNN(model, './crnn_model.h5', testGen, yTest, len(testGen))
+    model = CNN(4, 6, (140, 33, 1), trainGen, testGen)
+    #TrainCNN(model, trainGen, testGen, 200)
+    EvaluateCNN(model, './cnn_model.h5', testGen, yTest, len(testGen))
 
     print('CNN completed.')

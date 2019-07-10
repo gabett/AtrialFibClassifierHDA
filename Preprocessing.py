@@ -8,16 +8,15 @@ import scipy
 import keras
 import pickle
 import os.path
-import CRNN_features
+import CRNN_FeatureBased
 import QRS_util
 from tqdm import tqdm
 from random import seed
 from sklearn.model_selection import train_test_split
 
-
 folderPath = './training2017/'
 recordsPath = folderPath + 'REFERENCE.csv'
-isFourierEnabled = False
+
 
 def TrainTestSplit(signals, labels, multiDimensionalInput = False):
 
@@ -122,7 +121,7 @@ def FFT(signals):
     print('Done.')
     return logSignals
 
-def LoadSignalsAndLabelsFromFile(folderPath):
+def LoadSignalsAndLabelsFromFile(folderPath, isFourierEnabled = False):
 
     signals = []
     recordsFilePath = folderPath + 'REFERENCE.csv'
@@ -194,17 +193,32 @@ def LoadSignalsAndLabelsFromFile(folderPath):
     print('Done.')
     return signals, y
 
-def FindMinLen(signals):
-    minLen = None
+def CreateTrainTestFeatureSets(qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, batch_size, trainSplit):
 
-    for signal in signals:
-        if minLen is None:
-            minLen = signal.size
+    batch = []
+    inputs = []
 
-        if signal.size < minLen:
-            minLen = signal.size
+    while True:
+        for i in range(batch_size):
+          inputs = np.vstack((rAmplitudes[i, :], qAmplitudes[i, :]))
+          inputs = np.vstack((inputs, heartRatesDuringHeartBeat[i, :]))
+          inputs = np.vstack((inputs, rrIntervals[i, :]))
+        
+          batch.append(inputs.reshape(4,13))
+         
+          inputs = []
+      
+        trainDim = batch_size - int(batch_size * trainSplit)
+        xTrain = np.array(batch[:trainDim])
+        xTest = np.array(batch[trainDim:])
 
-    return minLen
+        y = labels[:batch_size]
+        y = keras.utils.to_categorical(y)
+
+        yTrain = y[:trainDim]
+        yTest = y[trainDim:]
+
+        return xTrain, yTrain, xTest, yTest
 
 def BaselineWanderFilter(signals):
 
@@ -336,10 +350,9 @@ def ExtractFeatures(signals, labels, size):
     qrsDurations = np.stack(qrsDurations, axis = 0)
 
     return qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels[:size]
-    
-if __name__ == '__main__':
 
-    signals, labels = LoadSignalsAndLabelsFromFile(folderPath)  
+def PreprocessingForSpectrogramApproach(isFourierEnabled = False):
+    signals, labels = LoadSignalsAndLabelsFromFile(folderPath, isFourierEnabled)  
 
     if os.path.isfile('./FilteredSignals.pk1'):
         print('Loading previously filtered signals ...')
@@ -349,12 +362,39 @@ if __name__ == '__main__':
         signals = BaselineWanderFilter(signals)
 
     signals = RandomCrop(signals) 
+
+    signals = FFT(signals)
     
+    signals = NormalizeData(signals) 
+    
+    xTrain, xTest, yTrain, yTest = TrainTestSplit(signals, labels, True)
+
+    print('Storing training set to file..')
+    with open('./TrainingSetFFT.pk1', 'wb') as f:
+        pickle.dump((xTrain, yTrain), f)
+            
+    print('Storing test set to file..')
+    with open ('./TestSetFFT.pk1', 'wb') as f:
+        pickle.dump((xTest, yTest), f)
+
+def PreprocessingForFeatureBasedApproach(isFourierEnabled = False):
+
     qAmplitudes = None
     rAmplitudes = None 
     heartRatesDuringHeartBeat = None
     rrIntervals = None
     qrsDurations = None
+
+    signals, labels = LoadSignalsAndLabelsFromFile(folderPath, isFourierEnabled)  
+
+    if os.path.isfile('./FilteredSignals.pk1'):
+        print('Loading previously filtered signals ...')
+        with open('./FilteredSignals.pk1', 'rb') as fp:
+            signals = pickle.load(fp)
+    else:
+        signals = BaselineWanderFilter(signals)
+
+    signals = RandomCrop(signals) 
     
     if os.path.isfile('./SignalFeatures.pk1'):
         print('Loading signals features ...')
@@ -370,35 +410,14 @@ if __name__ == '__main__':
             pickle.dump((qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels), f)
             print('Done.')
 
-    xTrain, yTrain, xTest, yTest = CRNN_features.DataGenerator(qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, 10, 0.2)
-    model = CRNN_features.CRNN(input_shape =  (4, 13, 1))
-    CRNN_features.TrainCRNN(model, xTrain, yTrain, xTest, yTest, 1)
-    # if isFourierEnabled == True:
-    #     signals = FFT(signals)
+    xTrain, yTrain, xTest, yTest = CreateTrainTestFeatureSets(qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, 10, 0.2)
     
-    # signals = NormalizeData(signals) 
-
-    # if isFourierEnabled == False:
-    #     train, test = TrainTestSplit(signals, labels, False)
-
-    #     print('Storing training set to file..')
-    #     with open ('./TrainingSet.pk1', 'wb') as f:
-    #         pickle.dump((train), f)
+    print('Storing training set to file..')
+    with open ('./TrainingSetFeatureBased.pk1', 'wb') as f:
+        pickle.dump((xTrain, yTrain), f)
             
-    #     print('Storing test set to file..')
-    #     with open ('./TestSet.pk1', 'wb') as f:
-    #         pickle.dump((test), f)
-
-    # else:
-
-    #     xTrain, xTest, yTrain, yTest = TrainTestSplit(signals, labels, True)
-
-    #     print('Storing training set to file..')
-    #     with open ('./TrainingSetFFT.pk1', 'wb') as f:
-    #         pickle.dump((xTrain, yTrain), f)
-            
-    #     print('Storing test set to file..')
-    #     with open ('./TestSetFFT.pk1', 'wb') as f:
-    #         pickle.dump((xTest, yTest), f)
+    print('Storing test set to file..')
+    with open ('./TestSetFeatureBased.pk1', 'wb') as f:
+        pickle.dump((xTest, yTest), f)
 
     print('Preprocessing completed')

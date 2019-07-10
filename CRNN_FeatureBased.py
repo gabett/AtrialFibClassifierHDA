@@ -15,34 +15,17 @@ from keras import Input
 from sklearn.metrics import precision_recall_fscore_support, roc_curve, auc, accuracy_score, precision_recall_curve
 import matplotlib.pyplot as plt 
 
+def LoadTrainingSet(filename):
 
-def DataGenerator(qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, batch_size, trainSplit):
+  with open(filename, 'rb') as f:
+    xTrain, yTrain = pickle.load(f)
+    return xTrain, yTrain
 
-    batch = []
-    inputs = []
+def LoadTestSet(filename):
 
-    while True:
-        for i in range(batch_size):
-          inputs = np.vstack((rAmplitudes[i, :], qAmplitudes[i, :]))
-          inputs = np.vstack((inputs, heartRatesDuringHeartBeat[i, :]))
-          inputs = np.vstack((inputs, rrIntervals[i, :]))
-        
-          batch.append(inputs.reshape(4,13))
-         
-          inputs = []
-      
-        trainDim = batch_size - int(batch_size * trainSplit)
-        xTrain = np.array(batch[:trainDim])
-        xTest = np.array(batch[trainDim:])
-
-        y = labels[:batch_size]
-        y = keras.utils.to_categorical(y)
-
-        yTrain = y[:trainDim]
-        yTest = y[trainDim:]
-
-        return xTrain, yTrain, xTest, yTest
-        
+  with open(filename, 'rb') as f:
+    xTest, yTest = pickle.load(f)
+    return xTest, yTest
 
 def CRNN(input_shape):
   
@@ -79,7 +62,10 @@ def CRNN(input_shape):
                   metrics=['accuracy']) 
     return model
 
-def TrainCRNN(model, xTrain, yTrain, xTest, yTest, epochs):
+def TrainCRNN(model, epochs):
+
+    xTrain, yTrain = LoadTrainingSet('./TrainingSetFeatureBased.pk1')
+    xTest, yTest = LoadTestSet('./TestSetFeatureBased.pk1')
 
     # Checkpoint
     filepath="./model/weights-crnn-feat-{epoch:02d}-{val_acc:.2f}.h5"
