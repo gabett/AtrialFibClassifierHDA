@@ -70,6 +70,8 @@ def find_S_point(ecg, R_peaks):
 		if cnt+1>=ecg.shape[0]:
 			break
 		while ecg[cnt]>ecg[cnt+1]:
+			if cnt+1 == 8999:
+				break
 			cnt+=1
 			if cnt>=ecg.shape[0]:
 				break

@@ -17,12 +17,26 @@ def LoadTrainingSet(filename):
 
     with open(filename, 'rb') as f:
         xTrain, yTrain = pickle.load(f)
+        
+        yTrain[yTrain=='N'] = 0
+        yTrain[yTrain=='A'] = 1
+        yTrain[yTrain=='O'] = 2
+        yTrain[yTrain=='~'] = 3
+        yTrain = keras.utils.to_categorical(yTrain)
+
         return xTrain, yTrain
 
 def LoadTestSet(filename):
 
     with open(filename, 'rb') as f:
         xTest, yTest = pickle.load(f)
+
+        yTest[yTest=='N'] = 0
+        yTest[yTest=='A'] = 1
+        yTest[yTest=='O'] = 2
+        yTest[yTest=='~'] = 3
+        yTest = keras.utils.to_categorical(yTest)
+
         return xTest, yTest
 
 
@@ -163,15 +177,3 @@ def EvaluateCRNN(model, weightsFile):
     precision = sum(precisions) / 4.0
     recall = sum(recalls) / 4.0
     f1 = sum(f1Scores) / 4.0
-
-# if __name__ == '__main__':
-
-#     xTrain, yTrain = LoadTrainingSet('./TrainingSetFFT.pk1')
-#     xTest, yTest = LoadTrainingSet('./TestSetFFT.pk1')
-#     trainGen, testGen = AugGenerator(xTrain, xTest, yTrain, yTest)
-    
-#     model = CRNN(4, 6, (140, 33, 1), trainGen, testGen)
-#     TrainCRNN(model, trainGen, testGen, 1)
-#     EvaluateCRNN(model, './crnn_model.h5', testGen, yTest, len(testGen))
-
-#     print('CNN completed.')

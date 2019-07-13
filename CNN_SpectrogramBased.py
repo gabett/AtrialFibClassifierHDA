@@ -17,12 +17,26 @@ def LoadTrainingSet(filename):
 
     with open(filename, 'rb') as f:
         xTrain, yTrain = pickle.load(f)
+        
+        yTrain[yTrain=='N'] = 0
+        yTrain[yTrain=='A'] = 1
+        yTrain[yTrain=='O'] = 2
+        yTrain[yTrain=='~'] = 3
+        yTrain = keras.utils.to_categorical(yTrain)
+
         return xTrain, yTrain
 
 def LoadTestSet(filename):
 
     with open(filename, 'rb') as f:
         xTest, yTest = pickle.load(f)
+
+        yTest[yTest=='N'] = 0
+        yTest[yTest=='A'] = 1
+        yTest[yTest=='O'] = 2
+        yTest[yTest=='~'] = 3
+        yTest = keras.utils.to_categorical(yTest)
+
         return xTest, yTest
 
 def AugGenerator(xTrain, xTest, yTrain, yTest):

@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 from keras.preprocessing.image import ImageDataGenerator
 from keras.models import Sequential
 from sklearn.metrics import confusion_matrix
-from keras.layers import Dense, Dropout, Flatten, Lambda, Reshape, Bidirectional, LSTM, GaussianNoise
+from keras.layers import Dense, Dropout, Flatten, Lambda, Reshape, Bidirectional, LSTM, GaussianNoise, GRU
 from keras.layers import Conv1D, MaxPooling1D, BatchNormalization, Activation
 from keras.models import Model
 from keras.callbacks import ModelCheckpoint
@@ -27,48 +27,34 @@ def LoadTestSet(filename):
     xTest, yTest = pickle.load(f)
     return xTest, yTest
 
-def CRNN(input_shape):
+def RNN(input_shape):
   
-    model = Sequential()
-    # CNN
-    model.add(Conv1D(8, 2, padding='same', name='conv1', input_shape = input_shape)) 
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-    model.add(MaxPooling1D(pool_size=2, name='max1'))  
+    X_input = Input(input_shape)
 
-    model.add(Conv1D(16, 2, padding='same', name='conv2'))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-    model.add(MaxPooling1D(pool_size=2, name='max2'))
+    X = GRU(128, name='gru0')(X_input)
 
-    # CNN to RNN
-    model.add(Reshape((1, 16)))
-    
-    # RNN
-    model.add(Bidirectional(LSTM(200), merge_mode='ave'))
-    model.add(BatchNormalization())
+#    X = Flatten()(X)
+    X = Dropout(0.5)(X)
+    X = GaussianNoise(0.2)(X)
+    X = Dense(3, activation='softmax', name='fc')(X)
 
-    model.add(Dropout(0.5))
-
-    # Adding noise
-    model.add(GaussianNoise(0.2))
-
-    # Activation
-    model.add(Dense(3, name='dense')) 
-    model.add(Activation('softmax', name='softmax'))
+    model = Model(inputs = X_input, outputs = X, name='RNN')
 
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=keras.optimizers.Adam(),
                   metrics=['accuracy']) 
+        
+    print(model.summary())
+
     return model
 
-def TrainCRNN(model, epochs):
+def TrainRNN(model, epochs):
 
     xTrain, yTrain = LoadTrainingSet('./TrainingSignalFeatures.pk1')
     xTest, yTest = LoadTestSet('./TestSignalFeatures.pk1')
 
     # Checkpoint
-    filepath="./model/weights-crnn-feat-{epoch:02d}-{val_acc:.2f}.h5"
+    filepath="./model/weights-rnn-feat-{epoch:02d}-{val_acc:.2f}.h5"
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
     callbacks_list = [checkpoint]
 
@@ -84,9 +70,9 @@ def TrainCRNN(model, epochs):
                         validation_steps=3328,
                         epochs=epochs, callbacks=callbacks_list, verbose=1)
 
-    model.save('./crnn_feat_model.h5')
+    model.save('./rnn_feat_model.h5')
 
-def EvaluateCRNN(model, weightsFile):
+def EvaluateRNN(model, weightsFile):
 
     xTest, yTest = LoadTestSet('./TestSetFeatureBased.pk1')
 
