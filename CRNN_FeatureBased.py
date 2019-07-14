@@ -54,7 +54,7 @@ def CRNN(input_shape):
     model.add(GaussianNoise(0.2))
 
     # Activation
-    model.add(Dense(3, name='dense')) 
+    model.add(Dense(4, name='dense')) 
     model.add(Activation('softmax', name='softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,

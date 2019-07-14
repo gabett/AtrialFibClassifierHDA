@@ -17,7 +17,6 @@ from sklearn.model_selection import train_test_split
 folderPath = './training2017/'
 recordsPath = folderPath + 'REFERENCE.csv'
 
-
 def TrainTestSplit(signals, labels):
 
     if len(signals) and len(labels)> 0:
@@ -37,28 +36,7 @@ def TrainTestSplit(signals, labels):
         # 'O' = 2
         # '~' = 3
 
-        # Count the elements in the sets
-        num_train_data_normal = sum(train_reference_df['label'] == 0)
-        num_train_data_afib   = sum(train_reference_df['label'] == 1)
-        num_train_data_other = sum(train_reference_df['label'] == 2)
-        num_train_data_noise   = sum(train_reference_df['label'] == 3)
 
-        num_val_data_normal   = sum(val_reference_df['label'] == 0)
-        num_val_data_afib     = sum(val_reference_df['label'] == 1)
-        num_val_data_other = sum(val_reference_df['label'] == 2)
-        num_val_data_noise   = sum(val_reference_df['label'] == 3)
-
-        print('### TRAIN SET')
-        print('\tNormal ECG: {} ({:.2f}%)'.format(num_train_data_normal, 100 * num_train_data_normal / len(train_reference_df)))
-        print('\tAfib ECG: {} ({:.2f}%)'.format(num_train_data_afib, 100 * num_train_data_afib / len(train_reference_df)))
-        print('\tOther ECG: {} ({:.2f}%)'.format(num_train_data_other, 100 * num_train_data_other / len(train_reference_df)))
-        print('\tNoisy ECG: {} ({:.2f}%)'.format(num_train_data_noise, 100 * num_train_data_noise / len(train_reference_df)))
-        
-        print('### VALIDATION SET')
-        print('\tNormal ECG: {} ({:.2f}%)'.format(num_val_data_normal, 100 * num_val_data_normal / len(train_reference_df)))
-        print('\tAfib ECG: {} ({:.2f}%)'.format(num_val_data_afib, 100 * num_val_data_afib / len(train_reference_df)))
-        print('\tOther ECG: {} ({:.2f}%)'.format(num_val_data_other, 100 * num_val_data_other / len(val_reference_df)))
-        print('\tNoisy ECG: {} ({:.2f}%)'.format(num_val_data_noise, 100 * num_val_data_noise / len(val_reference_df)))
 
         return train_reference_df, val_reference_df
 
@@ -165,7 +143,7 @@ def BaselineWanderFilter(signals):
     # Sampling frequency
     fs = 300
 
-    for i, signal in enumerate(signals[:200]):
+    for i, signal in enumerate(signals):
 
         # Baseline estimation
         win_size = int(np.round(0.2 * fs)) + 1
@@ -331,19 +309,21 @@ def PreprocessingForSpectrogramApproach(isFourierEnabled = False):
     trainingSet = TrainingTestAugumentationSpectrogram(trainingSet)
     trainingSet = RandomCrop(trainingSet, center_crop = False)
     trainSignals, labels = FFT(trainingSet)
-    trainSignals, labels = NormalizeData(trainSignals, labels) 
+    trainSignals, traininglabels = NormalizeData(trainSignals, labels) 
     
     testSet = RandomCrop(testSet, center_crop = True)
     testSignals, labels = FFT(testSet)
-    testSignals, labels = NormalizeData(testSignals, labels) 
+    testSignals, testLabels = NormalizeData(testSignals, labels) 
 
     print('Storing training set to file..')
     with open('./TrainingSetFFT.pk1', 'wb') as f:
-        pickle.dump((testSignals, labels), f)
+        print('Len  train:' + str(len(trainSignals)))
+        pickle.dump((trainSignals, traininglabels), f)
             
     print('Storing test set to file..')
     with open ('./TestSetFFT.pk1', 'wb') as f:
-        pickle.dump((testSignals, labels), f)
+        print('Len  test:' + str(len(testSignals)))
+        pickle.dump((testSignals, testLabels), f)
 
 def PreprocessingForFeatureBasedApproach(isFourierEnabled = False):
 
@@ -370,23 +350,37 @@ def PreprocessingForFeatureBasedApproach(isFourierEnabled = False):
     inputSize = 0
 
     print('Extracting training signals features ...')
-    qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, minSize = ExtractFeatures(trainingSet, size = 50, minThreshold = 20)
-    inputSize = minSize
+    if os.path.isfile('./TrainingFeatures.pk1'):
+        with open('./TrainingFeatures.pk1', 'rb') as fp:
+            qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, inputSize = pickle.load(fp)
+    else:
+        qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, minSize = ExtractFeatures(trainingSet, size = len(trainingSet), minThreshold = 20)
+        with open ('./TrainingFeatures.pk1', 'wb') as f:
+            pickle.dump((qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, minSize), f)
+            print('Done.')
+        inputSize = minSize
     print('Done.')
 
     print('Storing training signal features to file..')
     with open ('./TrainingSignalFeatures.pk1', 'wb') as f:
-        xTrain, yTrain = CreateTrainTestFeatureSets(qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, 10, minThresholdSignals = inputSize)
+        xTrain, yTrain = CreateTrainTestFeatureSets(qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, len(trainingSet), minThresholdSignals = inputSize)
         pickle.dump((xTrain, yTrain), f)
         print('Done.')
 
     print('Extracting test signals features ...')
-    qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, minSize = ExtractFeatures(testSet, size = 50, minThreshold = inputSize)
+    if os.path.isfile('./TestFeatures.pk1'):
+        with open('./TestFeatures.pk1', 'rb') as fp:
+            qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, inputSize = pickle.load(fp)
+    else:
+        qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, minSize = ExtractFeatures(testSet, size = len(testSet), minThreshold = inputSize)
+        with open ('./TestFeatures.pk1', 'wb') as f:
+            pickle.dump((qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, minSize), f)
+            print('Done.')
     print('Done.')
 
     print('Storing test signal features to file..')
     with open ('./TestSignalFeatures.pk1', 'wb') as f:
-        xTest, yTest = CreateTrainTestFeatureSets(qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, 10, minThresholdSignals = inputSize)
+        xTest, yTest = CreateTrainTestFeatureSets(qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels, len(testSet), minThresholdSignals = inputSize)
         pickle.dump((xTest, yTest), f)
         print('Done.')
 
@@ -436,7 +430,6 @@ def TrainingTestAugumentationFeatures(signals, y):
     print('Done.')
 
     return signals, y
-
 
 def TrainingTestAugumentationSpectrogram(trainingSet):
 

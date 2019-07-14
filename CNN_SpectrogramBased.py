@@ -22,6 +22,20 @@ def LoadTrainingSet(filename):
         yTrain[yTrain=='A'] = 1
         yTrain[yTrain=='O'] = 2
         yTrain[yTrain=='~'] = 3
+
+        # Count the elements in the sets
+        num_train_data_normal = sum(yTrain == 0)
+        num_train_data_afib   = sum(yTrain == 1)
+        num_train_data_other = sum(yTrain == 2)
+        num_train_data_noise   = sum(yTrain == 3)
+
+        print('### TRAIN SET')
+        print('\tNormal ECG: {} ({:.2f}%)'.format(num_train_data_normal, 100 * num_train_data_normal / len(yTrain)))
+        print('\tAfib ECG: {} ({:.2f}%)'.format(num_train_data_afib, 100 * num_train_data_afib / len(yTrain)))
+        print('\tOther ECG: {} ({:.2f}%)'.format(num_train_data_other, 100 * num_train_data_other / len(yTrain)))
+        print('\tNoisy ECG: {} ({:.2f}%)'.format(num_train_data_noise, 100 * num_train_data_noise / len(yTrain)))
+        
+
         yTrain = keras.utils.to_categorical(yTrain)
 
         return xTrain, yTrain
@@ -35,6 +49,18 @@ def LoadTestSet(filename):
         yTest[yTest=='A'] = 1
         yTest[yTest=='O'] = 2
         yTest[yTest=='~'] = 3
+
+        num_val_data_normal   = sum(yTest == 0)
+        num_val_data_afib     = sum(yTest == 1)
+        num_val_data_other = sum(yTest == 2)
+        num_val_data_noise   = sum(yTest == 3)
+
+        print('### VALIDATION SET')
+        print('\tNormal ECG: {} ({:.2f}%)'.format(num_val_data_normal, 100 * num_val_data_normal / len(yTest)))
+        print('\tAfib ECG: {} ({:.2f}%)'.format(num_val_data_afib, 100 * num_val_data_afib / len(yTest)))
+        print('\tOther ECG: {} ({:.2f}%)'.format(num_val_data_other, 100 * num_val_data_other / len(yTest)))
+        print('\tNoisy ECG: {} ({:.2f}%)'.format(num_val_data_noise, 100 * num_val_data_noise / len(yTest)))
+
         yTest = keras.utils.to_categorical(yTest)
 
         return xTest, yTest

@@ -36,7 +36,7 @@ def RNN(input_shape):
 #    X = Flatten()(X)
     X = Dropout(0.5)(X)
     X = GaussianNoise(0.2)(X)
-    X = Dense(3, activation='softmax', name='fc')(X)
+    X = Dense(4, activation='softmax', name='fc')(X)
 
     model = Model(inputs = X_input, outputs = X, name='RNN')
 
