@@ -88,13 +88,15 @@ def TrainCRNN(model, epochs):
 
 def EvaluateCRNN(model, weightsFile):
 
-    xTest, yTest = LoadTestSet('./TestSetFeatureBased.pk1')
+    xTest, yTest = LoadTestSet('./TestSetFeatures.pk1')
 
-    steps = 3328
     model.load_weights(weightsFile)
 
+    xTest = np.array(xTest)
+    yTest = np.array(yTest)
+
     print('Evaluation...')
-    yPredictedProbs = model.predict(xTest, yTest, steps = steps)
+    yPredictedProbs = model.predict(xTest)
     yMaxPredictedProbs = np.amax(yPredictedProbs, axis=1)
     yPredicted = yPredictedProbs.argmax(axis = 1)
     yTest = yTest.argmax(axis=1)

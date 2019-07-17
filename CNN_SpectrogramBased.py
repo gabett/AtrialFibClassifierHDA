@@ -134,17 +134,12 @@ def TrainCNN(model, epochs):
 
 def EvaluateCNN(model, weightsFile):
 
-    xTrain, yTrain = LoadTrainingSet('./TrainingSetFFT.pk1')
-    xTest, yTest = LoadTrainingSet('./TestSetFFT.pk1')
+    xTest, yTest = LoadTestSet('./TestSetFFT.pk1')
     
-    _, testGen = AugGenerator(xTrain, xTest, yTrain, yTest)
-
-    steps = len(testGen)
-
     model.load_weights(weightsFile)
 
     print('Evaluation...')
-    yPredictedProbs = model.predict_generator(testGen, steps = steps)
+    yPredictedProbs = model.predict(xTest)
     yMaxPredictedProbs = np.amax(yPredictedProbs, axis=1)
     yPredicted = yPredictedProbs.argmax(axis = 1)
     yTest = yTest.argmax(axis=1)
@@ -173,6 +168,10 @@ def EvaluateCNN(model, weightsFile):
         recalls.append(recall)
         f1Scores.append(fscore)
 
+        print('Precision: ', str(precision))
+        print('Recall: ', str(recall))
+        print('F-Score: ', str(fscore))
+
         fpr, tpr, _ = roc_curve(maskTest, yMaxPredictedProbsForClass)
         roc_auc = auc(fpr, tpr)
 
@@ -200,14 +199,7 @@ def EvaluateCNN(model, weightsFile):
     recall = sum(recalls) / 4.0
     f1 = sum(f1Scores) / 4.0
 
-if __name__ == '__main__':
+    print('Overall precision: ', str(precision))
+    print('Overall recall: ', str(recall))
+    print('Overall F-Score: ', str(f1))
 
-    xTrain, yTrain = LoadTrainingSet('./TrainingSetFFT.pk1')
-    xTest, yTest = LoadTrainingSet('./TestSetFFT.pk1')
-    trainGen, testGen = AugGenerator(xTrain, xTest, yTrain, yTest)
-    
-    model = CNN(4, 6, (140, 33, 1), trainGen, testGen)
-    #TrainCNN(model, trainGen, testGen, 200)
-    EvaluateCNN(model, './cnn_model.h5', testGen, yTest, len(testGen))
-
-    print('CNN completed.')

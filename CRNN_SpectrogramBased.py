@@ -149,13 +149,10 @@ def EvaluateCRNN(model, weightsFile):
     model.load_weights(weightsFile)
 
     print('Evaluation...')
-    yPredictedProbs = model.predict_generator(testGen, steps = steps)
+    yPredictedProbs = model.predict(xTest)
     yMaxPredictedProbs = np.amax(yPredictedProbs, axis=1)
     yPredicted = yPredictedProbs.argmax(axis = 1)
     yTest = yTest.argmax(axis=1)
-
-    # Evaluate accuracy
-    accuracy = accuracy_score(yTest, yPredicted)
 
     # Evaluate precision, recall and fscore
     precision, recall, fscore, _ = precision_recall_fscore_support(yTest, yPredicted, average='macro')
@@ -166,6 +163,9 @@ def EvaluateCRNN(model, weightsFile):
 
     for i in range(4):
 
+
+        print('Class ', str(i))
+
         yMaxPredictedProbsForClass = yMaxPredictedProbs
 
         # 1 * casts to int.
@@ -173,6 +173,10 @@ def EvaluateCRNN(model, weightsFile):
         maskPred = 1 * (yPredicted == i)
         
         precision, recall, fscore, _ = precision_recall_fscore_support(maskTest, maskPred, average='binary')
+
+        print('Precision: ', str(precision))
+        print('Recall: ', str(recall))
+        print('F-Score: ', str(fscore))
 
         precisions.append(precision)
         recalls.append(recall)
@@ -204,3 +208,8 @@ def EvaluateCRNN(model, weightsFile):
     precision = sum(precisions) / 4.0
     recall = sum(recalls) / 4.0
     f1 = sum(f1Scores) / 4.0
+
+    print('Overall precision: ', str(precision))
+    print('Overall recall: ', str(recall))
+    print('Overall F-Score: ', str(f1))
+

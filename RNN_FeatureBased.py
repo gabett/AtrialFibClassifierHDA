@@ -33,7 +33,6 @@ def RNN(input_shape):
 
     X = GRU(128, name='gru0')(X_input)
 
-#    X = Flatten()(X)
     X = Dropout(0.5)(X)
     X = GaussianNoise(0.2)(X)
     X = Dense(4, activation='softmax', name='fc')(X)
@@ -76,20 +75,22 @@ def EvaluateRNN(model, weightsFile):
 
     xTest, yTest = LoadTestSet('./TestSetFeatureBased.pk1')
 
-    steps = 3328
     model.load_weights(weightsFile)
 
     print('Evaluation...')
-    yPredictedProbs = model.predict(xTest, yTest, steps = steps)
+    yPredictedProbs = model(xTest)
     yMaxPredictedProbs = np.amax(yPredictedProbs, axis=1)
     yPredicted = yPredictedProbs.argmax(axis = 1)
     yTest = yTest.argmax(axis=1)
 
-    # Evaluate accuracy
-    accuracy = accuracy_score(yTest, yPredicted)
+
 
     # Evaluate precision, recall and fscore
     precision, recall, fscore, _ = precision_recall_fscore_support(yTest, yPredicted, average='macro')
+
+    print('Precision: ', str(precision))
+    print('Recall: ', str(recall))
+    print('F-Score: ', str(fscore))
 
     precisions = []
     recalls = []
@@ -135,3 +136,7 @@ def EvaluateRNN(model, weightsFile):
     precision = sum(precisions) / 4.0
     recall = sum(recalls) / 4.0
     f1 = sum(f1Scores) / 4.0
+
+    print('Overall precision: ', str(precision))
+    print('Overall recall: ', str(recall))
+    print('Overall F-Score: ', str(f1))
