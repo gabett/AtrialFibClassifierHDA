@@ -77,6 +77,45 @@ def AugGenerator(xTrain, xTest, yTrain, yTest):
     return trainGenerator, testGenerator
 
 
+def CrnnDemo(blockSize, blockCount, inputShape):
+
+    model = Sequential()
+
+    channels = 32
+    for i in range(blockCount):
+        for j in range(blockSize):
+            if i == 0 and j == 0:
+                conv = Conv2D(channels, kernel_size=(5, 5),
+                              input_shape=inputShape, padding='same')
+            else:
+                conv = Conv2D(channels, kernel_size=(5, 5), padding='same')
+            model.add(conv)
+            model.add(BatchNormalization())
+            model.add(Activation('relu'))
+            model.add(Dropout(0.15))
+            if j == blockSize - 2:
+                channels += 32
+        model.add(MaxPooling2D(pool_size=(2, 2), padding='same'))
+        model.add(Dropout(0.15))
+
+    model.add(Reshape((3, 224)))
+
+    # LSTM layer
+    model.add(LSTM(200))
+    model.add(Dropout(0.5))
+
+    # Adding noise
+    model.add(GaussianNoise(0.2))
+
+    # Linear classifier
+    model.add(Dense(4, activation='softmax'))
+
+    model.compile(loss=keras.losses.categorical_crossentropy,
+                  optimizer=keras.optimizers.Adam(),
+                  metrics=['accuracy']) 
+
+    return model
+
 def CRNN(blockSize, blockCount, inputShape):
 
     model = Sequential()
@@ -140,12 +179,8 @@ def TrainCRNN(model, epochs):
 
 def EvaluateCRNN(model, weightsFile):
 
-    xTrain, yTrain = LoadTrainingSet('./TrainingSetFFT.pk1')
-    xTest, yTest = LoadTrainingSet('./TestSetFFT.pk1')
-    
-    _, testGen = AugGenerator(xTrain, xTest, yTrain, yTest)
+    xTest, yTest = LoadTestSet('./TestSetFFT.pk1')
 
-    steps = len(testGen)
     model.load_weights(weightsFile)
 
     print('Evaluation...')

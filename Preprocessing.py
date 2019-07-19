@@ -36,8 +36,6 @@ def TrainTestSplit(signals, labels):
         # 'O' = 2
         # '~' = 3
 
-
-
         return train_reference_df, val_reference_df
 
 def CreateNoiseVector():
@@ -82,7 +80,7 @@ def FFT(dataset):
 
     return logSignals, labels
 
-def LoadSignalsAndLabelsFromFile(folderPath, isFourierEnabled = False):
+def LoadSignalsAndLabelsFromFile(folderPath):
 
     signals = []
     recordsFilePath = folderPath + 'REFERENCE.csv'
@@ -295,8 +293,8 @@ def ExtractFeatures(dataset, size, minThreshold):
 
     return qAmplitudes, rAmplitudes, heartRatesDuringHeartBeat, rrIntervals, qrsDurations, labels[:size], minSize
 
-def PreprocessingForSpectrogramApproach(isFourierEnabled = False):
-    signals, labels = LoadSignalsAndLabelsFromFile(folderPath, isFourierEnabled)  
+def PreprocessingForSpectrogramApproach():
+    signals, labels = LoadSignalsAndLabelsFromFile(folderPath)  
 
     if os.path.isfile('./FilteredSignals.pk1'):
         print('Loading previously filtered signals ...')
@@ -325,7 +323,7 @@ def PreprocessingForSpectrogramApproach(isFourierEnabled = False):
         print('Len  test:' + str(len(testSignals)))
         pickle.dump((testSignals, testLabels), f)
 
-def PreprocessingForFeatureBasedApproach(isFourierEnabled = False):
+def PreprocessingForFeatureBasedApproach():
 
     qAmplitudes = None
     rAmplitudes = None 
@@ -333,7 +331,7 @@ def PreprocessingForFeatureBasedApproach(isFourierEnabled = False):
     rrIntervals = None
     qrsDurations = None
 
-    signals, labels = LoadSignalsAndLabelsFromFile(folderPath, isFourierEnabled)  
+    signals, labels = LoadSignalsAndLabelsFromFile(folderPath)  
 
     if os.path.isfile('./FilteredSignals.pk1'):
         print('Loading previously filtered signals ...')

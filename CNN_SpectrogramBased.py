@@ -113,6 +113,48 @@ def CNN(blockSize, blockCount, inputShape):
 
     return model
 
+def CNNDemo(blockSize, blockCount, inputShape):
+
+    model = Sequential()
+
+    channels = 32
+    for i in range(blockCount):
+
+        for j in range(blockSize):
+
+            if i == 0 and j == 0:
+
+                conv = Conv2D(channels, kernel_size=(5, 5),
+                              input_shape=inputShape, padding='same')
+                              
+            else:
+                conv = Conv2D(channels, kernel_size=(5, 5), padding='same')
+
+            model.add(conv)
+            model.add(BatchNormalization())
+            model.add(Activation('relu'))
+            model.add(Dropout(0.3))
+
+            if j == blockSize - 2:
+                channels += 32
+
+        model.add(MaxPooling2D(pool_size=(2, 2), padding='same'))
+        model.add(Dropout(0.3))
+
+    model.add(Flatten())
+
+    # Adding noise
+    model.add(GaussianNoise(0.2))
+
+    # Linear classifier
+    model.add(Dense(4, activation='softmax'))
+
+    model.compile(loss=keras.losses.categorical_crossentropy,
+                  optimizer=keras.optimizers.Adam(),
+                  metrics=['accuracy'])
+
+    return model
+
 def TrainCNN(model, epochs):
 
     xTrain, yTrain = LoadTrainingSet('./TrainingSetFFT.pk1')
@@ -121,7 +163,7 @@ def TrainCNN(model, epochs):
     trainGen, testGen = AugGenerator(xTrain, xTest, yTrain, yTest)
 
     # Checkpoint
-    filepath="./model/weights-{epoch:02d}-{val_acc:.2f}.h5"
+    filepath = "./model/weights-cnn-{epoch:02d}-{val_acc:.2f}.h5"
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
     callbacks_list = [checkpoint]
 
@@ -143,9 +185,6 @@ def EvaluateCNN(model, weightsFile):
     yMaxPredictedProbs = np.amax(yPredictedProbs, axis=1)
     yPredicted = yPredictedProbs.argmax(axis = 1)
     yTest = yTest.argmax(axis=1)
-
-    # Evaluate accuracy
-    accuracy = accuracy_score(yTest, yPredicted)
 
     # Evaluate precision, recall and fscore
     precision, recall, fscore, _ = precision_recall_fscore_support(yTest, yPredicted, average='macro')
