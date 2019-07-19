@@ -168,6 +168,7 @@ def EvaluateCNN(model, weightsFile):
         recalls.append(recall)
         f1Scores.append(fscore)
 
+        print('Class ' , str(i))
         print('Precision: ', str(precision))
         print('Recall: ', str(recall))
         print('F-Score: ', str(fscore))

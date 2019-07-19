@@ -27,6 +27,37 @@ def LoadTestSet(filename):
     xTest, yTest = pickle.load(f)
     return xTest, yTest
 
+
+def generator(x, y, batchSize = 32):
+
+  offset = 0
+
+  while True:
+    
+    if(offset > len(x)):
+      offset = 0
+
+    xBatch = []
+    yBatch = []
+
+    rightLim = offset + batchSize
+    xSamples = x[offset : rightLim]
+    ySamples = y[offset : rightLim]
+
+    for i, xSamp in enumerate(xSamples):
+      xTemp = xSamp
+      yTemp = ySamples[i]
+      #x = np.expand_dims(x, axis=-1)
+      xBatch.append(xTemp)
+      yBatch.append(yTemp)
+
+    offset += batchSize - 1
+    xBatch = np.array(xBatch)
+    
+    yBatch = np.array(yBatch)
+
+    yield xBatch, yBatch
+
 def CRNN(input_shape):
   
     model = Sequential()
@@ -60,6 +91,9 @@ def CRNN(input_shape):
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=keras.optimizers.Adam(),
                   metrics=['accuracy']) 
+
+    print(model.summary())
+
     return model
 
 def TrainCRNN(model, epochs):
@@ -67,28 +101,25 @@ def TrainCRNN(model, epochs):
     xTrain, yTrain = LoadTrainingSet('./TrainingSignalFeatures.pk1')
     xTest, yTest = LoadTestSet('./TestSignalFeatures.pk1')
 
+    trainGen = generator(xTrain, yTrain)
+    testGen = generator(xTest, yTest)
+
     # Checkpoint
     filepath="./model/weights-crnn-feat-{epoch:02d}-{val_acc:.2f}.h5"
     checkpoint = ModelCheckpoint(filepath, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
     callbacks_list = [checkpoint]
 
-    xTrain = np.array(xTrain)
-    yTrain = np.array(yTrain)
 
-    xTest = np.array(xTest)
-    yTest = np.array(yTest)
-
-    # TODO: in produzione mettere validation_data=(xTest, yTest),
-    model.fit(xTrain, yTrain, 
-                        steps_per_epoch = 3328,
-                        validation_steps=3328,
+    model.fit_generator(trainGen, validation_data=testGen, 
+                        steps_per_epoch = np.ceil(len(xTrain) / 32),
+                        validation_steps=np.ceil(len(xTest) / 32),
                         epochs=epochs, callbacks=callbacks_list, verbose=1)
 
     model.save('./crnn_feat_model.h5')
 
 def EvaluateCRNN(model, weightsFile):
 
-    xTest, yTest = LoadTestSet('./TestSetFeatures.pk1')
+    xTest, yTest = LoadTestSet('./TestSignalFeatures.pk1')
 
     model.load_weights(weightsFile)
 
@@ -125,6 +156,11 @@ def EvaluateCRNN(model, weightsFile):
         recalls.append(recall)
         f1Scores.append(fscore)
 
+        print('Class ' , str(i))
+        print('Precision: ', str(precision))
+        print('Recall: ', str(recall))
+        print('F-Score: ', str(fscore))
+
         fpr, tpr, _ = roc_curve(maskTest, yMaxPredictedProbsForClass)
         roc_auc = auc(fpr, tpr)
 
@@ -151,3 +187,7 @@ def EvaluateCRNN(model, weightsFile):
     precision = sum(precisions) / 4.0
     recall = sum(recalls) / 4.0
     f1 = sum(f1Scores) / 4.0
+
+    print('Overall precision: ', str(precision))
+    print('Overall recall: ', str(recall))
+    print('Overall F-Score: ', str(f1))
