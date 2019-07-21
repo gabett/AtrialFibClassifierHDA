@@ -304,7 +304,7 @@ def PreprocessingForSpectrogramApproach():
         signals = BaselineWanderFilter(signals)
 
     trainingSet, testSet = TrainTestSplit(signals, labels)
-    trainingSet = TrainingTestAugumentationSpectrogram(trainingSet)
+    trainingSet = TrainingTestAugumentation(trainingSet)
     trainingSet = RandomCrop(trainingSet, center_crop = False)
     trainSignals, labels = FFT(trainingSet)
     trainSignals, traininglabels = NormalizeData(trainSignals, labels) 
@@ -341,6 +341,7 @@ def PreprocessingForFeatureBasedApproach():
         signals = BaselineWanderFilter(signals)
 
     trainingSet, testSet = TrainTestSplit(signals, labels)
+    trainingSet = TrainingTestAugumentation(trainingSet)
     trainingSet = RandomCrop(trainingSet, center_crop = False)
     
     testSet = RandomCrop(testSet, center_crop = True)
@@ -386,50 +387,7 @@ def PreprocessingForFeatureBasedApproach():
 
     return inputSize
 
-def TrainingTestAugumentationFeatures(signals, y):
-    print('Class distribution before doubling up ...')
-    print('Normal: ', len(np.where(y == 'N')[0]))
-    print('AF: ', len(np.where(y == 'A')[0]))
-    print('Other: ', len(np.where(y == 'O')[0]))
-    print('Noisy: ', len(np.where(y == '~')[0]))
-
-    # Double up AF signals
-
-    aFibMask = np.where(y == 'A')
-    aFibSignals = np.array(signals[aFibMask])
-
-    signals = np.hstack((signals, aFibSignals))
-    newAfibLabels = ['A']*len(aFibSignals)
-    y = np.append(y, newAfibLabels)
-
-    print('New AF observations number: ', len(np.where(y == 'A')[0]))
-
-    # Duplicating noisy signals to add
-
-    noiseMask = np.where(y == '~')
-    noiseSignals = np.array(signals[noiseMask])
-
-    noiseSignals = []
-    for i in range(300):
-        noiseSignals.append(CreateNoiseVector())
-    
-    noiseSignals = np.asarray(noiseSignals)
-    signals = np.hstack((signals, noiseSignals))
-
-    newNoiseLabels = ['~']*len(noiseSignals)
-    y = np.append(y, newNoiseLabels)
-
-    print('New Noise observations number: ', len(np.where(y == '~')[0]))
-
-    print('Storing signals and labels to file..')
-    with open ('./TrainingTestAugmented.pk1', 'wb') as f:
-        pickle.dump((signals, y), f)
-        
-    print('Done.')
-
-    return signals, y
-
-def TrainingTestAugumentationSpectrogram(trainingSet):
+def TrainingTestAugumentation(trainingSet):
 
     y = trainingSet['label']
     signals = trainingSet['signal']

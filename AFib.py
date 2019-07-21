@@ -6,15 +6,15 @@ import CNN_SpectrogramBased
 import sys
 
 
-features = True
-spectrogram = False
+features = False
+spectrogram = True
 
 if __name__ == "__main__":
 
 
     if features == True:
 
-        columnsNumber = Preprocessing.PreprocessingForFeatureBasedApproach(isFourierEnabled=False)
+        columnsNumber = Preprocessing.PreprocessingForFeatureBasedApproach()
         print('Columns number for datasets: ' + str(columnsNumber))
         
         # CRNN
@@ -29,7 +29,7 @@ if __name__ == "__main__":
 
     elif spectrogram == True:
         
-        Preprocessing.PreprocessingForSpectrogramApproach(isFourierEnabled=True)
+        Preprocessing.PreprocessingForSpectrogramApproach()
 
         # CRNN
         model = CRNN_SpectrogramBased.CRNN(4, 6, (140, 33, 1))
