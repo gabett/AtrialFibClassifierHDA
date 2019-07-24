@@ -23,9 +23,8 @@ if __name__ == "__main__":
 
     if approach == "features":
 
-        if method == "preprocessing":
-            columnsNumber = Preprocessing.PreprocessingForFeatureBasedApproach()
-            print('Columns number for datasets: ' + str(columnsNumber))
+        columnsNumber = Preprocessing.PreprocessingForFeatureBasedApproach()
+        print('Columns number for datasets: ' + str(columnsNumber))
         
         if model == "crnn":
             model = CRNN_FeatureBased.CRNN(input_shape =  (4, columnsNumber))
@@ -42,6 +41,7 @@ if __name__ == "__main__":
                     CRNN_FeatureBased.EvaluateCRNN(model, var)
 
         if model == "rnn":
+
             model = RNN_FeatureBased.RNN(input_shape = (4, columnsNumber))
 
             if method == "train":
@@ -82,7 +82,7 @@ if __name__ == "__main__":
                 if var is None:
                     CNN_SpectrogramBased.TrainCNN(model, 100)
                 else:
-                    CNN_SpectrogramBased.TrainCNN(model, var)
+                    CNN_SpectrogramBased.TrainCNN(model, int(var))
                               
             if method == "evaluate":
                 if var is None or method == "all":
