@@ -16,3 +16,4 @@ __pycache__/QRS_util.cpython-37.pyc
 QRS-detection
 *.rar
 *.h5
+.vscode/launch.json

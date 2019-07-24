@@ -62,12 +62,12 @@ def CRNN(input_shape):
   
     model = Sequential()
     # CNN
-    model.add(Conv1D(8, 2, padding='same', name='conv1', input_shape = input_shape)) 
+    model.add(Conv1D(8, 4, padding='same', name='conv1', input_shape = input_shape)) 
     model.add(BatchNormalization())
     model.add(Activation('relu'))
     model.add(MaxPooling1D(pool_size=2, name='max1'))  
 
-    model.add(Conv1D(16, 2, padding='same', name='conv2'))
+    model.add(Conv1D(16, 4, padding='same', name='conv2'))
     model.add(BatchNormalization())
     model.add(Activation('relu'))
     model.add(MaxPooling1D(pool_size=2, name='max2'))
