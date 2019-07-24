@@ -47,8 +47,8 @@ The project consists of a different multiclassifier built following two approach
 - Spectrogram CNN evaluation with default weights:
 `python AFib.py spectrogram evaluate cnn`
 
-- Spectrogram RNN evaluation with default weights:
-`python AFib.py spectrogram evaluate rnn ./weights.h5`
+- Spectrogram CNN evaluation with default weights:
+`python AFib.py spectrogram evaluate cnn ./weights.h5`
 
 - Spectrogram CRNN training with default epochs:
 `python AFib.py spectrogram train crnn`
