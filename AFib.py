@@ -15,7 +15,7 @@ if __name__ == "__main__":
     method = sys.argv[2]
     model = None
     var = None
-    
+
     if len(sys.argv) >= 4:
         model = sys.argv[3]
     if len(sys.argv) >= 5:
@@ -41,7 +41,7 @@ if __name__ == "__main__":
                 else:
                     CRNN_FeatureBased.EvaluateCRNN(model, var)
 
-        if method == "rnn":
+        if model == "rnn":
             model = RNN_FeatureBased.RNN(input_shape = (4, columnsNumber))
 
             if method == "train":

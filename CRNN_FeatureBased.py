@@ -76,7 +76,7 @@ def CRNN(input_shape):
     model.add(Reshape((1, 16)))
     
     # RNN
-    model.add(Bidirectional(LSTM(200), merge_mode='ave'))
+    model.add(LSTM(200))
     model.add(BatchNormalization())
 
     model.add(Dropout(0.5))
