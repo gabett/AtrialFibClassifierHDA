@@ -12,6 +12,7 @@ from keras.callbacks import ModelCheckpoint
 from keras import backend as K
 from sklearn.metrics import precision_recall_fscore_support, roc_curve, auc, accuracy_score, precision_recall_curve
 import matplotlib.pyplot as plt
+import random
 
 def LoadTrainingSet(filename):
 
@@ -114,6 +115,8 @@ def CRNN(blockSize, blockCount, inputShape):
                   optimizer=keras.optimizers.Adam(),
                   metrics=['accuracy']) 
 
+    print(model.summary())
+    
     return model
 
 
@@ -131,16 +134,36 @@ def TrainCRNN(model, epochs):
     callbacks_list = [checkpoint]
 
     model.fit_generator(trainGen,
-                        validation_data=testGen, steps_per_epoch = int(np.ceil(4040 / 20)),
-                        validation_steps = int(np.ceil(1010/20)),
+                        validation_data=testGen, steps_per_epoch = int(np.ceil(len(xTrain) / 32)),
+                        validation_steps = int(np.ceil(len(xTest) / 32)),
                         epochs=epochs, callbacks=callbacks_list, verbose=1)
 
     model.save('./crnn_model.h5')
 
+
+def EvaluateCRNNDemo(model, weightsFile):
+
+    xTest, yTest = LoadTestSet('./TestSetFFT.pk1')
+    
+    model.load_weights(weightsFile)
+
+    testIndex = random.randint(0,len(xTest))
+    testSignal = xTest[testIndex]
+    testSignal = np.expand_dims(testSignal, axis = 0)
+    testClass = np.array(yTest[testIndex])
+    
+    print('Predicting observation number ', str(testIndex), ' which belongs to class: ', str(testClass))
+    
+    print('Evaluation...')
+    yPredictedProbs = model.predict(testSignal)
+    yPredicted = yPredictedProbs.argmax(axis = 1)
+    
+    print('Predicted class is: ', str(yPredicted))
+
 def EvaluateCRNN(model, weightsFile):
 
     xTest, yTest = LoadTestSet('./TestSetFFT.pk1')
-
+    
     model.load_weights(weightsFile)
 
     print('Evaluation...')
@@ -158,9 +181,6 @@ def EvaluateCRNN(model, weightsFile):
 
     for i in range(4):
 
-
-        print('Class ', str(i))
-
         yMaxPredictedProbsForClass = yMaxPredictedProbs
 
         # 1 * casts to int.
@@ -169,13 +189,14 @@ def EvaluateCRNN(model, weightsFile):
         
         precision, recall, fscore, _ = precision_recall_fscore_support(maskTest, maskPred, average='binary')
 
-        print('Precision: ', str(precision))
-        print('Recall: ', str(recall))
-        print('F-Score: ', str(fscore))
-
         precisions.append(precision)
         recalls.append(recall)
         f1Scores.append(fscore)
+
+        print('Class ' , str(i))
+        print('Precision: ', str(precision))
+        print('Recall: ', str(recall))
+        print('F-Score: ', str(fscore))
 
         fpr, tpr, _ = roc_curve(maskTest, yMaxPredictedProbsForClass)
         roc_auc = auc(fpr, tpr)
@@ -207,4 +228,3 @@ def EvaluateCRNN(model, weightsFile):
     print('Overall precision: ', str(precision))
     print('Overall recall: ', str(recall))
     print('Overall F-Score: ', str(f1))
-

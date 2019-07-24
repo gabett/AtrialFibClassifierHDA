@@ -69,8 +69,8 @@ def AugGenerator(xTrain, xTest, yTrain, yTest):
 
     imagegen = ImageDataGenerator()
 
-    trainGenerator = imagegen.flow(xTrain, yTrain, batch_size=20)
-    testGenerator = imagegen.flow(xTest, yTest, batch_size=20)
+    trainGenerator = imagegen.flow(xTrain, yTrain, batch_size=32)
+    testGenerator = imagegen.flow(xTest, yTest, batch_size=32)
 
     return trainGenerator, testGenerator
 
@@ -129,8 +129,8 @@ def TrainCNN(model, epochs):
     callbacks_list = [checkpoint]
 
     model.fit_generator(trainGen,
-                        validation_data=testGen, steps_per_epoch = len(trainGen),
-                        validation_steps = len(testGen),
+                        validation_data=testGen, steps_per_epoch = len(trainGen) / 32,
+                        validation_steps = len(testGen) / 32,
                         epochs=epochs, callbacks=callbacks_list, verbose=1)
 
     model.save('./cnn_model.h5')
